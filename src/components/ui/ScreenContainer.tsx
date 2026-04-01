@@ -1,39 +1,73 @@
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from '../../theme/colors';
-import { spacing } from '../../theme/spacing';
+import { layout } from '../../theme/layout';
 
 type ScreenContainerProps = {
   children: ReactNode;
   scroll?: boolean;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  /** When true, removes default padding (useful for full-bleed headers). */
+  noPadding?: boolean;
+  keyboardAvoiding?: boolean;
+  keyboardVerticalOffset?: number;
+  /**
+   * Background color of the SafeAreaView shell. Used by full-bleed screens
+   * (noPadding) to match the dark hero color so pull-to-refresh overscroll
+   * shows the hero color instead of white.
+   */
+  bg?: string;
 };
 
 export function ScreenContainer({
   children,
   scroll = false,
   contentContainerStyle,
+  noPadding = false,
+  keyboardAvoiding = false,
+  keyboardVerticalOffset = 0,
+  bg,
 }: ScreenContainerProps) {
-  if (scroll) {
-    return (
-      <SafeAreaView edges={["top"]} style={styles.safeArea}>
-        <ScrollView
-          contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {children}
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
+  const paddingStyle = noPadding
+    ? undefined
+    : { paddingHorizontal: layout.screenPaddingH, paddingVertical: layout.screenPaddingV };
+
+  // noPadding screens (full-bleed headers) manage their own top inset internally.
+  const safeAreaEdges = noPadding ? [] : (['top'] as const);
+  const bgStyle = bg ? { backgroundColor: bg } : undefined;
+
+  const content = scroll ? (
+    <ScrollView
+      alwaysBounceVertical={false}
+      bounces={false}
+      contentContainerStyle={[styles.scrollContent, paddingStyle, contentContainerStyle]}
+      keyboardShouldPersistTaps="handled"
+      overScrollMode="never"
+      showsVerticalScrollIndicator={false}
+      style={[styles.scrollView, bgStyle]}
+    >
+      {children}
+    </ScrollView>
+  ) : (
+    <View style={[styles.content, paddingStyle, contentContainerStyle]}>{children}</View>
+  );
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.safeArea}>
-      <View style={[styles.content, contentContainerStyle]}>{children}</View>
+    <SafeAreaView edges={safeAreaEdges} style={[styles.safeArea, bgStyle]}>
+      {keyboardAvoiding ? (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={keyboardVerticalOffset}
+          style={styles.keyboardAvoider}
+        >
+          {content}
+        </KeyboardAvoidingView>
+      ) : (
+        content
+      )}
     </SafeAreaView>
   );
 }
@@ -45,10 +79,14 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: spacing.lg,
   },
   scrollContent: {
     flexGrow: 1,
-    padding: spacing.lg,
+  },
+  scrollView: {
+    backgroundColor: colors.background,
+  },
+  keyboardAvoider: {
+    flex: 1,
   },
 });

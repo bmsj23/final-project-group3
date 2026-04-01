@@ -2,7 +2,10 @@ import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../../theme/colors';
+import { radius } from '../../theme/radius';
+import { shadows } from '../../theme/shadows';
 import { spacing } from '../../theme/spacing';
+import { typography } from '../../theme/typography';
 import { ScreenContainer } from './ScreenContainer';
 
 type FeaturePlaceholderProps = {
@@ -42,42 +45,38 @@ export function FeaturePlaceholder({
 
 const styles = StyleSheet.create({
   eyebrow: {
+    ...typography.caption3,
     color: colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
     letterSpacing: 0.8,
     marginBottom: spacing.sm,
     textTransform: 'uppercase',
   },
   title: {
+    ...typography.h3,
     color: colors.text,
-    fontSize: 30,
-    fontWeight: '700',
     marginBottom: spacing.sm,
   },
   description: {
+    ...typography.body1,
     color: colors.textMuted,
-    fontSize: 16,
-    lineHeight: 24,
     marginBottom: spacing.lg,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 20,
-    borderWidth: 1,
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.lg,
     gap: spacing.sm,
     padding: spacing.lg,
+    ...shadows.card,
   },
   cardTitle: {
+    ...typography.h5,
     color: colors.text,
     fontSize: 18,
-    fontWeight: '600',
     marginBottom: spacing.xs,
   },
   highlight: {
+    ...typography.body2,
     color: colors.textMuted,
-    fontSize: 15,
     lineHeight: 22,
   },
   footer: {
