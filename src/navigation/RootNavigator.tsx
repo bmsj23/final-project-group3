@@ -2,7 +2,7 @@ import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 
 import { useAppSession } from '../providers/AppSessionProvider';
 import { colors } from '../theme/colors';
-import { AppTabsNavigator } from './AppTabsNavigator';
+import { AppNavigator } from './AppNavigator';
 import { AuthNavigator } from './AuthNavigator';
 
 const navigationTheme = {
@@ -11,7 +11,7 @@ const navigationTheme = {
     ...DefaultTheme.colors,
     background: colors.background,
     border: colors.border,
-    card: colors.surface,
+    card: colors.bgCard,
     notification: colors.primary,
     primary: colors.primary,
     text: colors.text,
@@ -19,11 +19,15 @@ const navigationTheme = {
 };
 
 export function RootNavigator() {
-  const { mode } = useAppSession();
+  const { isInitializing, mode } = useAppSession();
+
+  if (isInitializing) {
+    return null;
+  }
 
   return (
     <NavigationContainer theme={navigationTheme}>
-      {mode === 'unauthenticated' ? <AuthNavigator /> : <AppTabsNavigator />}
+      {mode === 'unauthenticated' ? <AuthNavigator /> : <AppNavigator />}
     </NavigationContainer>
   );
 }

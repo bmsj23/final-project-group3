@@ -1,12 +1,14 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { colors } from '../../theme/colors';
+import { radius } from '../../theme/radius';
 import { spacing } from '../../theme/spacing';
+import { typography } from '../../theme/typography';
 
 type PrimaryButtonProps = {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'danger' | 'dark';
   disabled?: boolean;
 };
 
@@ -23,12 +25,25 @@ export function PrimaryButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
-        variant === 'primary' ? styles.primary : styles.secondary,
+        variant === 'primary'
+          ? styles.primary
+          : variant === 'dark'
+            ? styles.dark
+          : variant === 'danger'
+            ? styles.danger
+            : styles.secondary,
         pressed && !disabled ? styles.pressed : null,
         disabled ? styles.disabled : null,
       ]}
     >
-      <Text style={[styles.label, variant === 'primary' ? styles.primaryLabel : styles.secondaryLabel]}>
+      <Text
+        style={[
+          styles.label,
+          variant === 'primary' || variant === 'danger' || variant === 'dark'
+            ? styles.primaryLabel
+            : styles.secondaryLabel,
+        ]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -38,32 +53,37 @@ export function PrimaryButton({
 const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: radius.md,
     minHeight: 52,
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
   },
   primary: {
     backgroundColor: colors.primary,
   },
+  dark: {
+    backgroundColor: colors.bgDark,
+  },
+  danger: {
+    backgroundColor: colors.error,
+  },
   secondary: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.bgCard,
     borderColor: colors.border,
     borderWidth: 1,
   },
   pressed: {
-    opacity: 0.88,
+    opacity: 0.9,
   },
   disabled: {
     opacity: 0.55,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.button1,
   },
   primaryLabel: {
-    color: colors.surface,
+    color: colors.white,
   },
   secondaryLabel: {
     color: colors.text,

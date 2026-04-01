@@ -6,3 +6,5 @@ export type SignInFormValues = {
 export type SignUpFormValues = SignInFormValues & {
   fullName: string;
 };
+
+export type AuthFormErrors<T extends string> = Partial<Record<T, string>>;
