@@ -132,7 +132,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                   <TextInput
                     autoCorrect={false}
                     onChangeText={setQuery}
-                    placeholder="Search by event, place, or category"
+                    placeholder="Search events, venues, categories…"
                     placeholderTextColor="#94A3B8"
                     returnKeyType="search"
                     style={styles.searchInput}
@@ -244,6 +244,8 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                     </View>
                   </ScrollView>
 
+                  <SectionHeader title="Upcoming Events" />
+
                   <View style={styles.list}>
                     {listEvents.map((event) => (
                       <EventListCard
@@ -269,7 +271,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   screen: {
-    backgroundColor: colors.background,
+    backgroundColor: '#F8FAFC',
     flex: 1,
   },
   topShell: {
@@ -300,8 +302,10 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.10)',
     borderRadius: radius.xl,
+    borderWidth: 1,
     flexDirection: 'row',
     minHeight: 54,
     paddingHorizontal: spacing.md,
@@ -323,7 +327,7 @@ const styles = StyleSheet.create({
     width: 36,
   },
   body: {
-    backgroundColor: colors.background,
+    backgroundColor: '#F8FAFC',
     gap: spacing.lg,
     paddingBottom: spacing.xxl,
     paddingHorizontal: layout.screenPaddingH,
@@ -341,6 +345,7 @@ const styles = StyleSheet.create({
   },
   categoryRow: {
     flexDirection: 'row',
+    gap: spacing.xs,
     paddingLeft: layout.screenPaddingH,
     paddingRight: layout.screenPaddingH,
   },
