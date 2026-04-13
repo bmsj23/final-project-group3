@@ -95,7 +95,7 @@ export function EventListCard({
             />
             {categoryName ? (
               <View style={styles.categoryBadge}>
-                <Text style={styles.categoryBadgeText}>{categoryName.toUpperCase()}</Text>
+                <Text allowFontScaling={false} style={styles.categoryBadgeText}>{categoryName.toUpperCase()}</Text>
               </View>
             ) : null}
             <View style={styles.favouriteBadge}>
@@ -165,11 +165,7 @@ const styles = StyleSheet.create({
   },
   featuredCard: {
     width: 200,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 8,
+    ...shadows.strong,
   },
   compactCard: {
     padding: spacing.sm,
@@ -210,7 +206,7 @@ const styles = StyleSheet.create({
     bottom: spacing.sm,
     left: spacing.sm,
     paddingHorizontal: spacing.xs,
-    paddingVertical: 3,
+    paddingVertical: spacing.xxs,
     position: 'absolute',
   },
   categoryBadgeText: {
