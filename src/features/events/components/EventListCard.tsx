@@ -95,6 +95,7 @@ export function EventListCard({
             />
             {categoryName ? (
               <View style={styles.categoryBadge}>
+                {/* Badge is a fixed-size overlay — system font scaling would break the layout */}
                 <Text allowFontScaling={false} style={styles.categoryBadgeText}>{categoryName.toUpperCase()}</Text>
               </View>
             ) : null}
