@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -81,14 +82,25 @@ export function EventListCard({
     >
       {variant === 'featured' ? (
         <>
-          <Image
-            contentFit="cover"
-            source={event.coverImageUrl ? { uri: event.coverImageUrl } : undefined}
-            style={styles.featuredImage}
-            transition={150}
-          />
-          <View style={styles.favouriteBadge}>
-            <Ionicons color={colors.error} name="heart" size={16} />
+          <View style={styles.featuredImageWrapper}>
+            <Image
+              contentFit="cover"
+              source={event.coverImageUrl ? { uri: event.coverImageUrl } : undefined}
+              style={styles.featuredImage}
+              transition={150}
+            />
+            <LinearGradient
+              colors={['transparent', 'rgba(15,23,42,0.62)']}
+              style={styles.featuredImageOverlay}
+            />
+            {categoryName ? (
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryBadgeText}>{categoryName.toUpperCase()}</Text>
+              </View>
+            ) : null}
+            <View style={styles.favouriteBadge}>
+              <Ionicons color={colors.error} name="heart" size={16} />
+            </View>
           </View>
           <View style={styles.featuredBody}>
             <Text numberOfLines={2} style={styles.featuredTitle}>
@@ -152,7 +164,12 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   featuredCard: {
-    width: 292,
+    width: 200,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
   },
   compactCard: {
     padding: spacing.sm,
@@ -162,19 +179,45 @@ const styles = StyleSheet.create({
   },
   featuredImage: {
     backgroundColor: '#DBEAFE',
-    height: 170,
+    flex: 1,
     width: '100%',
   },
   favouriteBadge: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: radius.full,
     height: 34,
     justifyContent: 'center',
     position: 'absolute',
-    right: spacing.md,
-    top: spacing.md,
+    right: spacing.sm,
+    top: spacing.sm,
     width: 34,
+  },
+  featuredImageWrapper: {
+    height: 170,
+    overflow: 'hidden',
+  },
+  featuredImageOverlay: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  categoryBadge: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: radius.full,
+    bottom: spacing.sm,
+    left: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 3,
+    position: 'absolute',
+  },
+  categoryBadgeText: {
+    color: 'rgba(255,255,255,0.92)',
+    fontFamily: fontFamily.semiBold,
+    fontSize: 9,
+    letterSpacing: 0.5,
   },
   featuredBody: {
     gap: spacing.xs,
