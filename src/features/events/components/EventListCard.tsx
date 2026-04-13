@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     backgroundColor: colors.bgSubtle,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: colors.bgSubtle,
   },
   featuredImage: {
     backgroundColor: '#DBEAFE',
@@ -245,8 +245,8 @@ const styles = StyleSheet.create({
   },
   categoryChip: {
     alignSelf: 'flex-start',
-    backgroundColor: '#EFF6FF',
-    borderRadius: 6,
+    backgroundColor: colors.bgInfo,
+    borderRadius: radius.xs,
     marginTop: 3,
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
