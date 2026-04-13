@@ -35,7 +35,7 @@ export function CategoryPill({ label, onPress, selected, icon }: CategoryPillPro
     >
       {resolvedIcon ? (
         <Ionicons
-          color={selected ? colors.textLight : colors.textMuted}
+          color={selected ? colors.textLight : colors.text}
           name={resolvedIcon}
           size={14}
         />
@@ -57,13 +57,13 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
     minHeight: 40,
     paddingHorizontal: spacing.md,
-    paddingVertical: 8,
+    paddingVertical: spacing.xs,
   },
   selected: {
     backgroundColor: colors.primary,
   },
   unselected: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.bgSubtle,
   },
   label: {
     fontFamily: fontFamily.medium,

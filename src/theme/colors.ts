@@ -37,6 +37,7 @@ export const colors = {
   bgDark: '#0F172A',
   bgCard: '#FFFFFF',
   bgInfo: '#EFF6FF',
+  bgSubtle: '#F1F5F9',
   bgDivider: 'rgba(32, 34, 44, 0.20)',
 
   // --- Transparent overlays ---
