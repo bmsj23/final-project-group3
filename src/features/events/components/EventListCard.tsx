@@ -6,7 +6,7 @@ import { colors } from '../../../theme/colors';
 import { radius } from '../../../theme/radius';
 import { shadows } from '../../../theme/shadows';
 import { spacing } from '../../../theme/spacing';
-import { typography } from '../../../theme/typography';
+import { fontFamily, typography } from '../../../theme/typography';
 import { formatEventDateTime } from '../formatters';
 import type { EventSummary } from '../types';
 
@@ -128,11 +128,15 @@ export function EventListCard({
             <Text numberOfLines={1} style={styles.meta}>
               {event.location}
             </Text>
-            {categoryName ? <Text style={styles.category}>{categoryName}</Text> : null}
+            {categoryName ? (
+              <View style={styles.categoryChip}>
+                <Text style={styles.categoryChipText}>{categoryName}</Text>
+              </View>
+            ) : null}
           </View>
           <View style={styles.trailingColumn}>
             <Text style={styles.spotsText}>{event.remainingSlots} spots</Text>
-            <Text style={styles.joinText}>JOIN NOW</Text>
+            <Text style={styles.joinText}>JOIN ›</Text>
           </View>
         </View>
       )}
@@ -152,6 +156,9 @@ const styles = StyleSheet.create({
   },
   compactCard: {
     padding: spacing.sm,
+    backgroundColor: colors.bgSubtle,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   featuredImage: {
     backgroundColor: '#DBEAFE',
@@ -223,11 +230,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 17,
   },
-  category: {
-    ...typography.caption3,
-    color: colors.primary,
-    marginTop: 2,
-  },
   trailingColumn: {
     alignItems: 'flex-end',
     gap: spacing.xs,
@@ -240,5 +242,18 @@ const styles = StyleSheet.create({
   joinText: {
     ...typography.caption3,
     color: colors.text,
+  },
+  categoryChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 6,
+    marginTop: 3,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+  },
+  categoryChipText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 10,
+    color: colors.primary,
   },
 });
