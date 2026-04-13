@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   screen: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.bgPage,
     flex: 1,
   },
   topShell: {
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     width: 36,
   },
   body: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.bgPage,
     gap: spacing.lg,
     paddingBottom: spacing.xxl,
     paddingHorizontal: layout.screenPaddingH,
