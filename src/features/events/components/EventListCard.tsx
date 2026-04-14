@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -6,7 +7,7 @@ import { colors } from '../../../theme/colors';
 import { radius } from '../../../theme/radius';
 import { shadows } from '../../../theme/shadows';
 import { spacing } from '../../../theme/spacing';
-import { typography } from '../../../theme/typography';
+import { fontFamily, typography } from '../../../theme/typography';
 import { formatEventDateTime } from '../formatters';
 import type { EventSummary } from '../types';
 
@@ -81,14 +82,26 @@ export function EventListCard({
     >
       {variant === 'featured' ? (
         <>
-          <Image
-            contentFit="cover"
-            source={event.coverImageUrl ? { uri: event.coverImageUrl } : undefined}
-            style={styles.featuredImage}
-            transition={150}
-          />
-          <View style={styles.favouriteBadge}>
-            <Ionicons color={colors.error} name="heart" size={16} />
+          <View style={styles.featuredImageWrapper}>
+            <Image
+              contentFit="cover"
+              source={event.coverImageUrl ? { uri: event.coverImageUrl } : undefined}
+              style={styles.featuredImage}
+              transition={150}
+            />
+            <LinearGradient
+              colors={['transparent', 'rgba(15,23,42,0.62)']}
+              style={styles.featuredImageOverlay}
+            />
+            {categoryName ? (
+              <View style={styles.categoryBadge}>
+                {/* Badge is a fixed-size overlay — system font scaling would break the layout */}
+                <Text allowFontScaling={false} style={styles.categoryBadgeText}>{categoryName.toUpperCase()}</Text>
+              </View>
+            ) : null}
+            <View style={styles.favouriteBadge}>
+              <Ionicons color={colors.error} name="heart" size={16} />
+            </View>
           </View>
           <View style={styles.featuredBody}>
             <Text numberOfLines={2} style={styles.featuredTitle}>
@@ -128,11 +141,15 @@ export function EventListCard({
             <Text numberOfLines={1} style={styles.meta}>
               {event.location}
             </Text>
-            {categoryName ? <Text style={styles.category}>{categoryName}</Text> : null}
+            {categoryName ? (
+              <View style={styles.categoryChip}>
+                <Text style={styles.categoryChipText}>{categoryName}</Text>
+              </View>
+            ) : null}
           </View>
           <View style={styles.trailingColumn}>
             <Text style={styles.spotsText}>{event.remainingSlots} spots</Text>
-            <Text style={styles.joinText}>JOIN NOW</Text>
+            <Text style={styles.joinText}>JOIN ›</Text>
           </View>
         </View>
       )}
@@ -148,26 +165,56 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   featuredCard: {
-    width: 292,
+    width: 200,
+    ...shadows.strong,
   },
   compactCard: {
     padding: spacing.sm,
+    backgroundColor: colors.bgSubtle,
+    borderWidth: 1,
+    borderColor: colors.bgSubtle,
   },
   featuredImage: {
     backgroundColor: '#DBEAFE',
-    height: 170,
+    flex: 1,
     width: '100%',
   },
   favouriteBadge: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: radius.full,
     height: 34,
     justifyContent: 'center',
     position: 'absolute',
-    right: spacing.md,
-    top: spacing.md,
+    right: spacing.sm,
+    top: spacing.sm,
     width: 34,
+  },
+  featuredImageWrapper: {
+    height: 170,
+    overflow: 'hidden',
+  },
+  featuredImageOverlay: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  categoryBadge: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: radius.full,
+    bottom: spacing.sm,
+    left: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs,
+    position: 'absolute',
+  },
+  categoryBadgeText: {
+    color: 'rgba(255,255,255,0.92)',
+    fontFamily: fontFamily.semiBold,
+    fontSize: 9,
+    letterSpacing: 0.5,
   },
   featuredBody: {
     gap: spacing.xs,
@@ -223,11 +270,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 17,
   },
-  category: {
-    ...typography.caption3,
-    color: colors.primary,
-    marginTop: 2,
-  },
   trailingColumn: {
     alignItems: 'flex-end',
     gap: spacing.xs,
@@ -240,5 +282,18 @@ const styles = StyleSheet.create({
   joinText: {
     ...typography.caption3,
     color: colors.text,
+  },
+  categoryChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.bgInfo,
+    borderRadius: radius.xs,
+    marginTop: 3,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+  },
+  categoryChipText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 10,
+    color: colors.primary,
   },
 });

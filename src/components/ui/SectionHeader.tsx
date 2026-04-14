@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
-import { typography } from '../../theme/typography';
+import { fontFamily, typography } from '../../theme/typography';
 
 type SectionHeaderProps = {
   title: string;
@@ -42,10 +42,13 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h5,
     color: colors.text,
-    fontSize: 22,
+    fontFamily: fontFamily.bold,
+    fontSize: 17,
+    letterSpacing: -0.3,
   },
   action: {
     ...typography.caption3,
     color: colors.primary,
+    letterSpacing: 0.8,
   },
 });
