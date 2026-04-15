@@ -1,7 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { AppTabScreenProps } from '../../../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -85,13 +84,6 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
     <ScreenContainer bg={colors.bgDark} noPadding>
       <StatusBar style="light" />
       <View style={styles.screen}>
-        <LinearGradient
-          colors={[colors.gradient.blackLinear.start, colors.gradient.blackLinear.end]}
-          end={{ x: 1, y: 1 }}
-          pointerEvents="none"
-          start={{ x: 0, y: 0 }}
-          style={styles.topShell}
-        />
         <ScrollView
           contentContainerStyle={styles.content}
           overScrollMode="never"
@@ -168,13 +160,6 @@ const styles = StyleSheet.create({
   screen: {
     backgroundColor: colors.background,
     flex: 1,
-  },
-  topShell: {
-    height: layout.refreshShellHeight,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
   },
   scroll: {
     backgroundColor: 'transparent',
