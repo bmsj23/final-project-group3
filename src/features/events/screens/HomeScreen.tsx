@@ -94,6 +94,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardWrap}>
         <View style={styles.screen}>
           <ScrollView
+            bounces={false}
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
             overScrollMode="never"

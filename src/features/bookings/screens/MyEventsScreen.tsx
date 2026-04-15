@@ -85,6 +85,7 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
       <StatusBar style="light" />
       <View style={styles.screen}>
         <ScrollView
+          bounces={false}
           contentContainerStyle={styles.content}
           overScrollMode="never"
           refreshControl={
