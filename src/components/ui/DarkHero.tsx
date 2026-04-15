@@ -75,8 +75,8 @@ export function DarkHero({
 
 const styles = StyleSheet.create({
   hero: {
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+    borderBottomLeftRadius: radius.xl,
+    borderBottomRightRadius: radius.xl,
     overflow: 'hidden',
     paddingHorizontal: layout.screenPaddingH,
     paddingBottom: spacing.xl,
