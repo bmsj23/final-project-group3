@@ -1,7 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { AppTabScreenProps } from '../../../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -94,14 +93,8 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       <StatusBar style="light" />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardWrap}>
         <View style={styles.screen}>
-          <LinearGradient
-            colors={[colors.gradient.blackLinear.start, colors.gradient.blackLinear.end]}
-            end={{ x: 1, y: 1 }}
-            pointerEvents="none"
-            start={{ x: 0, y: 0 }}
-            style={styles.topShell}
-          />
           <ScrollView
+            bounces={false}
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
             overScrollMode="never"
@@ -132,7 +125,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                   <TextInput
                     autoCorrect={false}
                     onChangeText={setQuery}
-                    placeholder="Search events, venues, categories…"
+                    placeholder="Search by event, place, or category"
                     placeholderTextColor="#94A3B8"
                     returnKeyType="search"
                     style={styles.searchInput}
@@ -244,8 +237,6 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                     </View>
                   </ScrollView>
 
-                  <SectionHeader title="Upcoming Events" />
-
                   <View style={styles.list}>
                     {listEvents.map((event) => (
                       <EventListCard
@@ -271,15 +262,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   screen: {
-    backgroundColor: colors.bgPage,
+    backgroundColor: colors.background,
     flex: 1,
-  },
-  topShell: {
-    height: layout.refreshShellHeight,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
   },
   scroll: {
     backgroundColor: 'transparent',
@@ -302,10 +286,8 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: radius.xl,
-    borderWidth: 1,
     flexDirection: 'row',
     minHeight: 54,
     paddingHorizontal: spacing.md,
@@ -327,7 +309,7 @@ const styles = StyleSheet.create({
     width: 36,
   },
   body: {
-    backgroundColor: colors.bgPage,
+    backgroundColor: colors.background,
     gap: spacing.lg,
     paddingBottom: spacing.xxl,
     paddingHorizontal: layout.screenPaddingH,
@@ -345,7 +327,6 @@ const styles = StyleSheet.create({
   },
   categoryRow: {
     flexDirection: 'row',
-    gap: spacing.xs,
     paddingLeft: layout.screenPaddingH,
     paddingRight: layout.screenPaddingH,
   },
