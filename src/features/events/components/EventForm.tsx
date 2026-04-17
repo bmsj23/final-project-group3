@@ -1,17 +1,27 @@
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-
-import { IconTextField } from '../../../components/ui/IconTextField';
-import { PrimaryButton } from '../../../components/ui/PrimaryButton';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { colors } from '../../../theme/colors';
 import { radius } from '../../../theme/radius';
-import { shadows } from '../../../theme/shadows';
 import { spacing } from '../../../theme/spacing';
 import { typography } from '../../../theme/typography';
 import { EVENT_IMAGE_MAX_SIZE_LABEL } from '../contracts';
-import { formatDateTimeInput, parseDateTimeInput, tagsFromInput, tagsToInput } from '../formatters';
+import {
+  formatDateTimeInput,
+  parseDateTimeInput,
+  tagsFromInput,
+  tagsToInput,
+} from '../formatters';
 import { pickEventImageAsset } from '../imagePicker';
 import type {
   EventCategorySummary,
@@ -19,9 +29,13 @@ import type {
   EventFormValues,
   EventImageAsset,
 } from '../types';
-import { validateEventForm } from '../validation';
-import { CategoryPill } from './CategoryPill';
+import {
+  validateEventForm,
+  isFutureIsoDate,
+  isRegistrationDeadlineBeforeEvent,
+} from '../validation';
 
+// ─── Public types ─────────────────────────────────────────────────────────────
 export type EventFormSubmission = {
   values: EventFormValues;
   selectedImage: EventImageAsset | null;
@@ -37,12 +51,232 @@ type EventFormProps = {
   isSubmitting: boolean;
   errorMessage: string | null;
   onSubmit: (submission: EventFormSubmission) => Promise<void>;
+  onStepChange?: (step: number) => void;
+  onDescriptionFocus?: () => void;
 };
 
-function buildCapacityInput(value: number) {
-  return value > 0 ? String(value) : '';
+// ─── Step definitions ─────────────────────────────────────────────────────────
+const STEPS = [
+  { label: 'Details',  icon: 'document-text-outline'  as const },
+  { label: 'Schedule', icon: 'calendar-outline'        as const },
+  { label: 'Review',   icon: 'cloud-upload-outline'    as const },
+];
+
+// ─── Small helper: styled label ──────────────────────────────────────────────
+function FieldLabel({ text, required }: { text: string; required?: boolean }) {
+  return (
+    <View style={fl.row}>
+      <Text style={fl.label}>{text}</Text>
+      {required && <Text style={fl.required}> *</Text>}
+    </View>
+  );
+}
+const fl = StyleSheet.create({
+  row:      { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  label:    { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#334155' },
+  required: { fontFamily: 'Inter_700Bold', fontSize: 13, color: colors.primary },
+});
+
+// ─── Custom text field ────────────────────────────────────────────────────────
+function Field({
+  label,
+  required,
+  error,
+  hint,
+  icon,
+  multiline,
+  ...inputProps
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  hint?: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+  multiline?: boolean;
+} & React.ComponentProps<typeof TextInput>) {
+  const hasError = Boolean(error);
+  return (
+    <View style={fieldStyles.wrap}>
+      <FieldLabel text={label} required={required} />
+      <View style={[
+        fieldStyles.shell,
+        hasError && fieldStyles.shellError,
+        multiline && fieldStyles.shellMulti,
+      ]}>
+        {icon && (
+          <View style={[fieldStyles.iconWrap, hasError && fieldStyles.iconWrapError]}>
+            <Ionicons name={icon} size={16} color={hasError ? colors.error : colors.primary} />
+          </View>
+        )}
+        <TextInput
+          style={[
+            fieldStyles.input,
+            icon && fieldStyles.inputWithIcon,
+            multiline && fieldStyles.inputMulti,
+          ]}
+          placeholderTextColor="#B0BFCD"
+          multiline={multiline}
+          textAlignVertical={multiline ? 'top' : undefined}
+          {...inputProps}
+        />
+      </View>
+      {error   ? <Text style={fieldStyles.error}>{error}</Text>   : null}
+      {!error && hint ? <Text style={fieldStyles.hint}>{hint}</Text> : null}
+    </View>
+  );
+}
+const fieldStyles = StyleSheet.create({
+  wrap:          { gap: 0 },
+  shell: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5, borderColor: '#E2E8F0',
+    borderRadius: radius.md, minHeight: 54,
+    overflow: 'hidden',
+  },
+  shellError:    { borderColor: colors.error, backgroundColor: '#FFF5F5' },
+  shellMulti:    { alignItems: 'flex-start', minHeight: 110 },
+  iconWrap: {
+    width: 48, alignItems: 'center', justifyContent: 'center' as any,
+    borderRightWidth: 1, borderRightColor: '#E2E8F0',
+    alignSelf: 'stretch',
+  },
+  iconWrapError: { borderRightColor: '#FECACA', backgroundColor: '#FFF0F0' },
+  input: {
+    flex: 1, fontFamily: 'Inter_400Regular',
+    fontSize: 15, color: '#0F172A',
+    paddingHorizontal: spacing.md, minHeight: 52,
+  },
+  inputWithIcon: { paddingLeft: spacing.sm },
+  inputMulti:    { paddingTop: spacing.md, minHeight: 108 },
+  error:  { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.error, marginTop: 5 },
+  hint:   { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8', marginTop: 5 },
+});
+
+// ─── Review row ───────────────────────────────────────────────────────────────
+function ReviewRow({ icon, label, value, color }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  color?: string;
+}) {
+  return (
+    <View style={rrStyles.row}>
+      <View style={[rrStyles.iconWrap, color ? { backgroundColor: color + '18' } : null]}>
+        <Ionicons name={icon} size={15} color={color ?? colors.primary} />
+      </View>
+      <View style={rrStyles.text}>
+        <Text style={rrStyles.label}>{label}</Text>
+        <Text style={rrStyles.value} numberOfLines={2}>{value || '—'}</Text>
+      </View>
+    </View>
+  );
+}
+const rrStyles = StyleSheet.create({
+  row:     { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  iconWrap:{
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  text:    { flex: 1, gap: 2 },
+  label:   { fontFamily: 'Inter_500Medium', fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.4 },
+  value:   { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#0F172A', lineHeight: 20 },
+});
+
+// ─── Step nav buttons ─────────────────────────────────────────────────────────
+function NavRow({
+  onBack,
+  onNext,
+  nextLabel,
+  backDisabled,
+  nextDisabled,
+  nextColor,
+}: {
+  onBack: () => void;
+  onNext: () => void;
+  nextLabel: string;
+  backDisabled?: boolean;
+  nextDisabled?: boolean;
+  nextColor?: string[];
+}) {
+  return (
+    <View style={navStyles.row}>
+      <Pressable
+        disabled={backDisabled}
+        style={({ pressed }) => [navStyles.backBtn, backDisabled && navStyles.backBtnDisabled, pressed && { opacity: 0.7 }]}
+        onPress={onBack}
+      >
+        <Ionicons name="chevron-back" size={18} color={backDisabled ? '#CBD5E1' : '#64748B'} />
+        <Text style={[navStyles.backText, backDisabled && { color: '#CBD5E1' }]}>Back</Text>
+      </Pressable>
+      <Pressable
+        disabled={nextDisabled}
+        style={({ pressed }) => [navStyles.nextBtn, nextDisabled && { opacity: 0.55 }, pressed && { opacity: 0.85 }]}
+        onPress={onNext}
+      >
+        <LinearGradient
+          colors={(nextColor ?? ['#2563EB', '#1D4ED8']) as [string, string, ...string[]]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+          style={navStyles.nextGrad}
+        >
+          <Text style={navStyles.nextText}>{nextLabel}</Text>
+          <Ionicons name="arrow-forward" size={16} color="#fff" />
+        </LinearGradient>
+      </Pressable>
+    </View>
+  );
+}
+const navStyles = StyleSheet.create({
+  row:            { flexDirection: 'row', gap: spacing.sm, marginTop: 4 },
+  backBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0',
+    borderRadius: radius.md, minHeight: 52, paddingHorizontal: spacing.lg, flex: 1,
+    justifyContent: 'center',
+  },
+  backBtnDisabled:{ borderColor: '#F1F5F9' },
+  backText:       { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#64748B' },
+  nextBtn:        { flex: 2, borderRadius: radius.md, overflow: 'hidden' },
+  nextGrad: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    minHeight: 52, gap: 6, paddingHorizontal: spacing.lg,
+  },
+  nextText:       { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#fff' },
+});
+
+// ─── Step 0 validation ────────────────────────────────────────────────────────
+function validateStep0(
+  values: EventFormValues,
+  capacityInput: string,
+): EventFormErrors {
+  const errs: EventFormErrors = {};
+  if (!values.title.trim())       errs.title       = 'Event name is required.';
+  if (!values.category)           errs.category    = 'Please select a category.';
+  if (!values.location.trim())    errs.location    = 'Location is required.';
+  if (!values.description.trim()) errs.description = 'Description is required.';
+  const cap = Number.parseInt(capacityInput.trim(), 10);
+  if (!capacityInput.trim() || !Number.isFinite(cap) || cap <= 0)
+    errs.capacity = 'Capacity must be greater than zero.';
+  return errs;
 }
 
+// ─── Step 1 validation ────────────────────────────────────────────────────────
+function validateStep1(
+  dateTimeInput: string,
+  deadlineInput: string,
+): EventFormErrors {
+  const errs: EventFormErrors = {};
+  const dt  = parseDateTimeInput(dateTimeInput);
+  const ddl = parseDateTimeInput(deadlineInput);
+  if (!dt  || !isFutureIsoDate(dt))   errs.dateTime = 'Event date must be a valid future date.';
+  if (!ddl || !isFutureIsoDate(ddl))  errs.registrationDeadline = 'Deadline must be a valid future date.';
+  else if (dt && !isRegistrationDeadlineBeforeEvent(ddl, dt))
+    errs.registrationDeadline = 'Deadline must be before the event date.';
+  return errs;
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export function EventForm({
   resetKey,
   initialValues,
@@ -51,347 +285,559 @@ export function EventForm({
   isSubmitting,
   errorMessage,
   onSubmit,
+  onStepChange,
+  onDescriptionFocus,
 }: EventFormProps) {
-  const [values, setValues] = useState<EventFormValues>(initialValues);
-  const [capacityInput, setCapacityInput] = useState(buildCapacityInput(initialValues.capacity));
+  const [values, setValues]         = useState<EventFormValues>(initialValues);
+  const [capacityInput, setCapacityInput] = useState(initialValues.capacity > 0 ? String(initialValues.capacity) : '');
   const [dateTimeInput, setDateTimeInput] = useState(formatDateTimeInput(initialValues.dateTime));
-  const [registrationDeadlineInput, setRegistrationDeadlineInput] = useState(
-    formatDateTimeInput(initialValues.registrationDeadline),
-  );
-  const [tagsInput, setTagsInput] = useState(tagsToInput(initialValues.tags));
-  const [errors, setErrors] = useState<EventFormErrors>({});
+  const [deadlineInput, setDeadlineInput] = useState(formatDateTimeInput(initialValues.registrationDeadline));
+  const [tagsInput, setTagsInput]   = useState(tagsToInput(initialValues.tags));
+  const [errors, setErrors]         = useState<EventFormErrors>({});
   const [selectedImage, setSelectedImage] = useState<EventImageAsset | null>(null);
-  const [removeExistingCoverImage, setRemoveExistingCoverImage] = useState(false);
+  const [removeExisting, setRemoveExisting] = useState(false);
+  const [step, setStep]             = useState(0);
+
+  // Slide animation between steps
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  function animateStep(nextStep: number) {
+    const dir = nextStep > step ? 30 : -30;
+    slideAnim.setValue(dir);
+    setStep(nextStep);
+    onStepChange?.(nextStep);
+    Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 80, friction: 10 }).start();
+  }
 
   useEffect(() => {
     setValues(initialValues);
-    setCapacityInput(buildCapacityInput(initialValues.capacity));
+    setCapacityInput(initialValues.capacity > 0 ? String(initialValues.capacity) : '');
     setDateTimeInput(formatDateTimeInput(initialValues.dateTime));
-    setRegistrationDeadlineInput(formatDateTimeInput(initialValues.registrationDeadline));
+    setDeadlineInput(formatDateTimeInput(initialValues.registrationDeadline));
     setTagsInput(tagsToInput(initialValues.tags));
     setErrors({});
     setSelectedImage(null);
-    setRemoveExistingCoverImage(false);
-  }, [resetKey, initialValues]);
+    setRemoveExisting(false);
+    setStep(0);
+    onStepChange?.(0);
+  }, [resetKey]);
 
-  const previewUri = selectedImage?.uri ?? (removeExistingCoverImage ? null : initialValues.coverImageUrl ?? null);
+  const previewUri = selectedImage?.uri ?? (removeExisting ? null : initialValues.coverImageUrl ?? null);
 
-  function clearFieldError(field: keyof EventFormValues) {
-    setErrors((current) => ({
-      ...current,
-      [field]: undefined,
-    }));
-  }
-
-  function updateValue<Key extends keyof EventFormValues>(key: Key, value: EventFormValues[Key]) {
-    setValues((current) => ({
-      ...current,
-      [key]: value,
-    }));
-    clearFieldError(key);
+  function updateValue<K extends keyof EventFormValues>(key: K, val: EventFormValues[K]) {
+    setValues(p => ({ ...p, [key]: val }));
+    setErrors(p => ({ ...p, [key]: undefined }));
   }
 
   async function handlePickImage() {
-    clearFieldError('coverImageUrl');
+    setErrors(p => ({ ...p, coverImageUrl: undefined }));
     const { data, error } = await pickEventImageAsset();
-
-    if (error) {
-      setErrors((current) => ({
-        ...current,
-        coverImageUrl: error.message,
-      }));
-      return;
-    }
-
-    if (!data) {
-      return;
-    }
-
+    if (error) { setErrors(p => ({ ...p, coverImageUrl: error.message })); return; }
+    if (!data) return;
     setSelectedImage(data);
-    setRemoveExistingCoverImage(false);
+    setRemoveExisting(false);
   }
 
   function handleRemoveImage() {
-    if (selectedImage) {
-      setSelectedImage(null);
-      clearFieldError('coverImageUrl');
-      return;
-    }
+    if (selectedImage) { setSelectedImage(null); return; }
+    if (initialValues.coverImageUrl) setRemoveExisting(v => !v);
+  }
 
-    if (!initialValues.coverImageUrl) {
-      return;
-    }
+  // ── Step nav with validation ────────────────────────────────────────────
+  function goToStep1() {
+    const errs = validateStep0(values, capacityInput);
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    setErrors({});
+    animateStep(1);
+  }
 
-    setRemoveExistingCoverImage((current) => !current);
-    clearFieldError('coverImageUrl');
+  function goToStep2() {
+    const errs = validateStep1(dateTimeInput, deadlineInput);
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    setErrors({});
+    animateStep(2);
   }
 
   async function handleSubmit() {
-    const parsedCapacity = Number.parseInt(capacityInput.trim(), 10);
+    // Final full validation just in case
+    const parsedCap = Number.parseInt(capacityInput.trim(), 10);
     const nextValues: EventFormValues = {
       ...values,
-      capacity: Number.isFinite(parsedCapacity) ? parsedCapacity : 0,
-      coverImageUrl: removeExistingCoverImage ? null : initialValues.coverImageUrl ?? null,
+      capacity: Number.isFinite(parsedCap) ? parsedCap : 0,
+      coverImageUrl: removeExisting ? null : initialValues.coverImageUrl ?? null,
       dateTime: parseDateTimeInput(dateTimeInput),
-      registrationDeadline: parseDateTimeInput(registrationDeadlineInput),
+      registrationDeadline: parseDateTimeInput(deadlineInput),
       tags: tagsFromInput(tagsInput),
     };
-
-    const validationErrors = validateEventForm(nextValues);
-    setErrors(validationErrors);
-
-    if (Object.keys(validationErrors).length > 0) {
+    const allErrors = validateEventForm(nextValues);
+    if (Object.keys(allErrors).length > 0) {
+      setErrors(allErrors);
+      // Jump back to the first step that has errors
+      const step0Fields: (keyof EventFormValues)[] = ['title','category','location','capacity','description'];
+      const step1Fields: (keyof EventFormValues)[] = ['dateTime','registrationDeadline'];
+      if (step0Fields.some(f => allErrors[f])) { animateStep(0); return; }
+      if (step1Fields.some(f => allErrors[f])) { animateStep(1); return; }
       return;
     }
-
     await onSubmit({
       values: nextValues,
       selectedImage,
       originalCoverImageUrl: initialValues.coverImageUrl ?? null,
-      coverImageChanged: Boolean(selectedImage) || removeExistingCoverImage,
+      coverImageChanged: Boolean(selectedImage) || removeExisting,
     });
   }
 
   return (
-    <View style={styles.form}>
-      <View style={styles.coverSection}>
-        <Pressable accessibilityRole="button" onPress={() => void handlePickImage()} style={styles.coverDropzone}>
-          {previewUri ? (
-            <Image contentFit="cover" source={{ uri: previewUri }} style={styles.coverImage} transition={150} />
-          ) : (
-            <View style={styles.coverPlaceholder}>
-              <Ionicons color={colors.primary} name="add" size={22} />
-              <Text style={styles.coverPlaceholderTitle}>Add Cover Photos</Text>
-              <Text style={styles.coverPlaceholderBody}>Images up to {EVENT_IMAGE_MAX_SIZE_LABEL}</Text>
+    <View style={styles.root}>
+      {/* ── Step progress bar ── */}
+      <View style={styles.progress}>
+        {STEPS.map((s, i) => (
+          <View key={s.label} style={styles.progressItem}>
+            <View style={[
+              styles.progressDot,
+              i === step   && styles.progressDotActive,
+              i <  step    && styles.progressDotDone,
+            ]}>
+              {i < step
+                ? <Ionicons name="checkmark" size={13} color="#fff" />
+                : <Text style={[styles.progressNum, i === step && { color: '#fff' }]}>{i + 1}</Text>
+              }
             </View>
-          )}
-        </Pressable>
-
-        <View style={styles.thumbnailRow}>
-          {[0, 1, 2, 3].map((slot) => (
-            <View key={slot} style={styles.thumbnailSlot}>
-              <Ionicons color={colors.primary} name="add" size={18} />
-            </View>
-          ))}
-        </View>
-
-        {previewUri || initialValues.coverImageUrl ? (
-          <PrimaryButton
-            disabled={isSubmitting}
-            label={
-              selectedImage
-                ? 'Undo Image Change'
-                : removeExistingCoverImage
-                  ? 'Restore Image'
-                  : 'Remove / Replace Image'
-            }
-            onPress={selectedImage || initialValues.coverImageUrl ? handleRemoveImage : () => void handlePickImage()}
-            variant="secondary"
-          />
-        ) : null}
-        {errors.coverImageUrl ? <Text style={styles.errorText}>{errors.coverImageUrl}</Text> : null}
+            <Text style={[styles.progressLabel, i === step && styles.progressLabelActive]}>
+              {s.label}
+            </Text>
+            {i < STEPS.length - 1 && (
+              <View style={[styles.progressLine, i < step && styles.progressLineDone]} />
+            )}
+          </View>
+        ))}
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Event Details</Text>
+      {/* ── Animated step content ── */}
+      <Animated.View style={{ opacity: slideAnim.interpolate({ inputRange: [-30,0,30], outputRange: [0,1,0] }), transform: [{ translateX: slideAnim }] }}>
 
-        <IconTextField
-          error={errors.title}
-          label="Event Name*"
-          onChangeText={(value) => updateValue('title', value)}
-          placeholder="Type your event name"
-          value={values.title}
-        />
+        {/* ══ STEP 0: DETAILS ══ */}
+        {step === 0 && (
+          <View style={styles.stepContent}>
 
-        <IconTextField
-          editable={false}
-          hint="Choose one category below."
-          label="Event Type*"
-          placeholder=""
-          value={values.category ? categories.find((category) => category.id === values.category)?.name ?? '' : ''}
-        />
-        <View style={styles.categoryRow}>
-          {categories.map((category) => (
-            <CategoryPill
-              key={category.id}
-              label={category.name}
-              onPress={() => updateValue('category', category.id)}
-              selected={values.category === category.id}
+            {/* Cover image */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Cover Image</Text>
+              <Text style={styles.sectionSub}>Optional — adds visual appeal in the event feed</Text>
+
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.coverZone, pressed && { opacity: 0.88 }]}
+                onPress={() => void handlePickImage()}
+              >
+                {previewUri ? (
+                  <>
+                    <Image contentFit="cover" source={{ uri: previewUri }} style={styles.coverImg} transition={150} />
+                    <View style={styles.coverOverlay}>
+                      <Ionicons name="camera" size={20} color="#fff" />
+                      <Text style={styles.coverOverlayText}>Change Photo</Text>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.coverPlaceholder}>
+                    <View style={styles.coverPlaceholderIcon}>
+                      <Ionicons name="image-outline" size={28} color={colors.primary} />
+                    </View>
+                    <Text style={styles.coverPlaceholderTitle}>Add Cover Photo</Text>
+                    <Text style={styles.coverPlaceholderSub}>JPG, PNG, WEBP · up to {EVENT_IMAGE_MAX_SIZE_LABEL}</Text>
+                  </View>
+                )}
+              </Pressable>
+
+              {previewUri && (
+                <Pressable style={styles.removeImgBtn} onPress={handleRemoveImage}>
+                  <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                  <Text style={styles.removeImgText}>
+                    {selectedImage ? 'Undo change' : removeExisting ? 'Restore image' : 'Remove image'}
+                  </Text>
+                </Pressable>
+              )}
+              {errors.coverImageUrl ? <Text style={styles.fieldError}>{errors.coverImageUrl}</Text> : null}
+            </View>
+
+            {/* Event details */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Event Details</Text>
+
+              <Field
+                label="Event Name"
+                required
+                error={errors.title}
+                icon="sparkles-outline"
+                value={values.title}
+                onChangeText={v => updateValue('title', v)}
+                placeholder="e.g. TechSummit PH 2026"
+                returnKeyType="next"
+              />
+
+              {/* Category selector */}
+              <View style={styles.fieldWrap}>
+                <FieldLabel text="Category" required />
+                <View style={styles.categoryGrid}>
+                  {categories.map(cat => {
+                    const selected = values.category === cat.id;
+                    return (
+                      <Pressable
+                        key={cat.id}
+                        style={[styles.catChip, selected && styles.catChipSelected]}
+                        onPress={() => updateValue('category', cat.id)}
+                      >
+                        <Text style={[styles.catChipText, selected && styles.catChipTextSelected]}>
+                          {cat.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {errors.category ? <Text style={styles.fieldError}>{errors.category}</Text> : null}
+              </View>
+
+              <Field
+                label="Location / Venue"
+                required
+                error={errors.location}
+                icon="location-outline"
+                value={values.location}
+                onChangeText={v => updateValue('location', v)}
+                placeholder="e.g. SM Mall of Asia, Manila"
+              />
+
+              <Field
+                label="Capacity"
+                required
+                error={errors.capacity}
+                icon="people-outline"
+                value={capacityInput}
+                onChangeText={v => { setCapacityInput(v); setErrors(p => ({ ...p, capacity: undefined })); }}
+                placeholder="Max number of attendees"
+                keyboardType="number-pad"
+              />
+
+              <Field
+                label="Tags"
+                hint="Separate with commas — e.g. music, students, workshop"
+                icon="pricetag-outline"
+                value={tagsInput}
+                onChangeText={setTagsInput}
+                placeholder="music, tech, free"
+              />
+
+              <Field
+                label="Description"
+                required
+                error={errors.description}
+                value={values.description}
+                onChangeText={v => updateValue('description', v)}
+                onFocus={onDescriptionFocus}
+                placeholder="Describe your event — what attendees can expect, who it's for, etc."
+                multiline
+              />
+            </View>
+
+            <NavRow
+              onBack={() => {}}
+              onNext={goToStep1}
+              nextLabel="Next: Schedule"
+              backDisabled
             />
-          ))}
-        </View>
-        {errors.category ? <Text style={styles.errorText}>{errors.category}</Text> : null}
+          </View>
+        )}
 
-        <IconTextField
-          error={errors.dateTime}
-          hint="Use YYYY-MM-DD HH:MM in your local time."
-          label="Select Date and Time*"
-          leadingIcon="calendar-outline"
-          onChangeText={(value) => {
-            setDateTimeInput(value);
-            clearFieldError('dateTime');
-          }}
-          placeholder="Choose event date"
-          value={dateTimeInput}
-        />
+        {/* ══ STEP 1: SCHEDULE ══ */}
+        {step === 1 && (
+          <View style={styles.stepContent}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Event Schedule</Text>
+              <Text style={styles.sectionSub}>Use YYYY-MM-DD HH:MM format in your local time</Text>
 
-        <IconTextField
-          error={errors.registrationDeadline}
-          hint="Must be earlier than the event date."
-          label="Registration Deadline*"
-          leadingIcon="time-outline"
-          onChangeText={(value) => {
-            setRegistrationDeadlineInput(value);
-            clearFieldError('registrationDeadline');
-          }}
-          placeholder="Choose deadline"
-          value={registrationDeadlineInput}
-        />
+              {/* Date hint box */}
+              <View style={styles.hintBox}>
+                <Ionicons name="information-circle-outline" size={16} color="#60A5FA" />
+                <Text style={styles.hintBoxText}>
+                  Example: <Text style={styles.hintBoxCode}>2026-06-15 18:00</Text> for June 15, 6:00 PM
+                </Text>
+              </View>
 
-        <IconTextField
-          error={errors.location}
-          label="Location*"
-          leadingIcon="location-outline"
-          onChangeText={(value) => updateValue('location', value)}
-          placeholder="Type your venue"
-          value={values.location}
-        />
+              <Field
+                label="Event Date & Time"
+                required
+                error={errors.dateTime}
+                icon="calendar-outline"
+                hint="YYYY-MM-DD HH:MM"
+                value={dateTimeInput}
+                onChangeText={v => { setDateTimeInput(v); setErrors(p => ({ ...p, dateTime: undefined })); }}
+                placeholder="2026-06-15 18:00"
+                keyboardType="numbers-and-punctuation"
+                returnKeyType="next"
+              />
 
-        <IconTextField
-          error={errors.capacity}
-          keyboardType="number-pad"
-          label="Capacity*"
-          leadingIcon="people-outline"
-          onChangeText={(value) => {
-            setCapacityInput(value);
-            clearFieldError('capacity');
-          }}
-          placeholder="How many attendees?"
-          value={capacityInput}
-        />
+              <Field
+                label="Registration Deadline"
+                required
+                error={errors.registrationDeadline}
+                icon="time-outline"
+                hint="Must be before the event date"
+                value={deadlineInput}
+                onChangeText={v => { setDeadlineInput(v); setErrors(p => ({ ...p, registrationDeadline: undefined })); }}
+                placeholder="2026-06-10 23:59"
+                keyboardType="numbers-and-punctuation"
+              />
 
-        <IconTextField
-          hint="Separate tags with commas."
-          label="Tags"
-          onChangeText={setTagsInput}
-          placeholder="music, students, workshop"
-          value={tagsInput}
-        />
+              {/* Visual date preview if both are valid */}
+              {parseDateTimeInput(dateTimeInput) && parseDateTimeInput(deadlineInput) &&
+               isFutureIsoDate(parseDateTimeInput(dateTimeInput)) &&
+               isFutureIsoDate(parseDateTimeInput(deadlineInput)) && (
+                <View style={styles.datePreview}>
+                  <View style={styles.datePreviewRow}>
+                    <Ionicons name="checkmark-circle" size={15} color="#10B981" />
+                    <Text style={styles.datePreviewText}>
+                      Event: {new Date(parseDateTimeInput(dateTimeInput)).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </Text>
+                  </View>
+                  <View style={styles.datePreviewRow}>
+                    <Ionicons name="checkmark-circle" size={15} color="#10B981" />
+                    <Text style={styles.datePreviewText}>
+                      Deadline: {new Date(parseDateTimeInput(deadlineInput)).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
 
-        <IconTextField
-          error={errors.description}
-          label="Event Description*"
-          multiline
-          onChangeText={(value) => updateValue('description', value)}
-          placeholder="Type your event description..."
-          style={styles.textAreaInput}
-          textAlignVertical="top"
-          value={values.description}
-        />
-      </View>
+            <NavRow
+              onBack={() => animateStep(0)}
+              onNext={goToStep2}
+              nextLabel="Review & Publish"
+            />
+          </View>
+        )}
 
-      {errorMessage ? (
-        <View style={styles.errorCard}>
-          <Text style={styles.errorCardTitle}>We could not save this event</Text>
-          <Text style={styles.errorCardBody}>{errorMessage}</Text>
-        </View>
-      ) : null}
+        {/* ══ STEP 2: REVIEW ══ */}
+        {step === 2 && (
+          <View style={styles.stepContent}>
+            {/* Cover preview */}
+            {previewUri ? (
+              <View style={styles.reviewCoverWrap}>
+                <Image contentFit="cover" source={{ uri: previewUri }} style={styles.reviewCover} transition={150} />
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.55)']}
+                  style={StyleSheet.absoluteFill}
+                  pointerEvents="none"
+                />
+                <View style={styles.reviewCoverLabel}>
+                  <Ionicons name="image-outline" size={13} color="rgba(255,255,255,0.7)" />
+                  <Text style={styles.reviewCoverLabelText}>Cover image added</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.reviewNoCover}>
+                <Ionicons name="image-outline" size={16} color="#94A3B8" />
+                <Text style={styles.reviewNoCoverText}>No cover image — you can add one later by editing this event.</Text>
+              </View>
+            )}
 
-      <PrimaryButton disabled={isSubmitting} label={submitLabel} onPress={() => void handleSubmit()} variant="dark" />
+            {/* Details review */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Review Details</Text>
+              <View style={styles.reviewGrid}>
+                <ReviewRow icon="sparkles-outline" label="Event Name"    value={values.title}                                    color="#60A5FA" />
+                <ReviewRow icon="pricetag-outline" label="Category"      value={categories.find(c => c.id === values.category)?.name ?? '—'} color="#FBBF24" />
+                <ReviewRow icon="location-outline" label="Location"      value={values.location}                                  color="#34D399" />
+                <ReviewRow icon="people-outline"   label="Capacity"      value={capacityInput ? `${capacityInput} attendees` : '—'} color="#A78BFA" />
+                {tagsInput.trim() && (
+                  <ReviewRow icon="pricetag-outline" label="Tags"        value={tagsInput}                                        color="#FB923C" />
+                )}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Schedule</Text>
+              <View style={styles.reviewGrid}>
+                <ReviewRow icon="calendar-outline" label="Event Date"          value={dateTimeInput  || '—'} color="#60A5FA" />
+                <ReviewRow icon="time-outline"     label="Registration Closes" value={deadlineInput   || '—'} color="#EF4444" />
+              </View>
+            </View>
+
+            {/* Description preview */}
+            {values.description.trim() ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Description</Text>
+                <Text style={styles.reviewDesc} numberOfLines={4}>{values.description}</Text>
+              </View>
+            ) : null}
+
+            {/* Global error */}
+            {errorMessage ? (
+              <View style={styles.errorCard}>
+                <View style={styles.errorCardIcon}>
+                  <Ionicons name="alert-circle-outline" size={18} color={colors.error} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.errorCardTitle}>Couldn't save this event</Text>
+                  <Text style={styles.errorCardBody}>{errorMessage}</Text>
+                </View>
+              </View>
+            ) : null}
+
+            <NavRow
+              onBack={() => animateStep(1)}
+              onNext={() => void handleSubmit()}
+              nextLabel={submitLabel}
+              nextDisabled={isSubmitting}
+              nextColor={['#10B981', '#059669']}
+            />
+          </View>
+        )}
+      </Animated.View>
     </View>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  form: {
-    gap: spacing.xl,
-  },
-  coverSection: {
-    gap: spacing.md,
-  },
-  coverDropzone: {
-    backgroundColor: colors.bgCard,
-    borderColor: '#BFDBFE',
-    borderRadius: radius.xl,
-    borderStyle: 'dashed',
-    borderWidth: 1.5,
-    minHeight: 212,
-    overflow: 'hidden',
-  },
-  coverImage: {
-    height: 212,
-    width: '100%',
-  },
-  coverPlaceholder: {
-    alignItems: 'center',
-    height: 212,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  coverPlaceholderTitle: {
-    ...typography.button1,
-    color: colors.primary,
-    marginTop: spacing.sm,
-  },
-  coverPlaceholderBody: {
-    ...typography.caption2,
-    color: colors.textMuted,
-    marginTop: spacing.xxs,
-  },
-  thumbnailRow: {
+  root: { flex: 1, gap: spacing.lg },
+
+  // Progress bar
+  progress: {
     flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  thumbnailSlot: {
     alignItems: 'center',
-    backgroundColor: colors.bgCard,
-    borderColor: '#BFDBFE',
-    borderRadius: radius.md,
-    borderStyle: 'dashed',
-    borderWidth: 1.5,
-    flex: 1,
-    height: 54,
-    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
   },
+  progressItem: { flex: 1, alignItems: 'center', position: 'relative' },
+  progressDot: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 2, borderColor: '#BFDBFE',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 6,
+  },
+  progressDotActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  progressDotDone:   { backgroundColor: '#10B981',      borderColor: '#10B981'      },
+  progressNum:  { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#94A3B8' },
+  progressLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: '#94A3B8', textAlign: 'center' },
+  progressLabelActive: { fontFamily: 'Inter_600SemiBold', color: colors.primary },
+  progressLine: {
+    position: 'absolute', top: 17, left: '62%', right: '-38%',
+    height: 2, backgroundColor: '#E2E8F0',
+  },
+  progressLineDone: { backgroundColor: '#10B981' },
+
+  stepContent: { gap: spacing.lg },
+
+  // Section card
   section: {
-    backgroundColor: colors.bgCard,
+    backgroundColor: '#FFFFFF',
     borderRadius: radius.xl,
-    gap: spacing.lg,
+    borderWidth: 1.5, borderColor: '#F1F5F9',
     padding: spacing.lg,
-    ...shadows.card,
+    gap: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
   },
-  sectionTitle: {
-    ...typography.h5,
-    color: colors.text,
+  sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#0F172A' },
+  sectionSub:   { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8', marginTop: -8 },
+
+  // Cover image
+  coverZone: {
+    borderRadius: radius.xl, overflow: 'hidden',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 2, borderColor: '#E2E8F0', borderStyle: 'dashed',
+    minHeight: 160,
   },
-  categoryRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: -spacing.sm,
-    rowGap: spacing.sm,
+  coverImg:   { width: '100%', height: 180 },
+  coverOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row', gap: 6,
   },
-  textAreaInput: {
-    minHeight: 120,
-    paddingTop: spacing.md,
+  coverOverlayText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
+  coverPlaceholder: {
+    height: 160, alignItems: 'center', justifyContent: 'center', gap: 8,
   },
-  errorText: {
-    ...typography.caption2,
-    color: colors.error,
+  coverPlaceholderIcon: {
+    width: 56, height: 56, borderRadius: 18,
+    backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center',
   },
+  coverPlaceholderTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.primary },
+  coverPlaceholderSub:   { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8' },
+  removeImgBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'center',
+    backgroundColor: '#FFF5F5', borderRadius: radius.full,
+    paddingHorizontal: 14, paddingVertical: 7,
+    borderWidth: 1, borderColor: '#FECACA',
+  },
+  removeImgText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#EF4444' },
+
+  // Category chips
+  fieldWrap: { gap: 0 },
+  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: 4 },
+  catChip: {
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: radius.full, borderWidth: 1.5, borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+  },
+  catChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  catChipText:         { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#64748B' },
+  catChipTextSelected: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#fff' },
+
+  fieldError: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.error, marginTop: 4 },
+
+  // Schedule hints
+  hintBox: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: '#EFF6FF', borderRadius: radius.md,
+    borderWidth: 1, borderColor: '#BFDBFE',
+    padding: spacing.md,
+  },
+  hintBoxText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#1D4ED8', flex: 1, lineHeight: 19 },
+  hintBoxCode: { fontFamily: 'Inter_700Bold' },
+  datePreview: {
+    backgroundColor: '#ECFDF5', borderRadius: radius.md,
+    borderWidth: 1, borderColor: '#A7F3D0',
+    padding: spacing.md, gap: 6,
+  },
+  datePreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  datePreviewText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#065F46', flex: 1 },
+
+  // Review step
+  reviewCoverWrap: { borderRadius: radius.xl, overflow: 'hidden', height: 160 },
+  reviewCover:     { width: '100%', height: '100%' },
+  reviewCoverLabel: {
+    position: 'absolute', bottom: 10, left: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+  },
+  reviewCoverLabelText: { fontFamily: 'Inter_500Medium', fontSize: 11, color: 'rgba(255,255,255,0.8)' },
+  reviewNoCover: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#F8FAFC', borderRadius: radius.md,
+    borderWidth: 1, borderColor: '#E2E8F0',
+    padding: spacing.md,
+  },
+  reviewNoCoverText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#94A3B8', flex: 1, lineHeight: 19 },
+  reviewGrid:  { gap: 14 },
+  reviewDesc:  { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#475569', lineHeight: 22 },
+
+  // Error card
   errorCard: {
-    backgroundColor: colors.bgCard,
-    borderColor: colors.error,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    gap: spacing.xs,
-    padding: spacing.lg,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    backgroundColor: '#FEF2F2', borderRadius: radius.xl,
+    borderWidth: 1.5, borderColor: '#FECACA',
+    padding: spacing.md,
   },
-  errorCardTitle: {
-    ...typography.button1,
-    color: colors.error,
+  errorCardIcon: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  errorCardBody: {
-    ...typography.body2,
-    color: colors.textMuted,
-  },
+  errorCardTitle: { fontFamily: 'Inter_700Bold', fontSize: 14, color: colors.error },
+  errorCardBody:  { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#B91C1C', lineHeight: 19, marginTop: 2 },
 });

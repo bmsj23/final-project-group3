@@ -1,15 +1,26 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-
-import { AccessNotice } from '../../../components/ui/AccessNotice';
-import { PrimaryButton } from '../../../components/ui/PrimaryButton';
-import { ScreenContainer } from '../../../components/ui/ScreenContainer';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useAppSession } from '../../../providers/AppSessionProvider';
-import { colors } from '../../../theme/colors';
-import { spacing } from '../../../theme/spacing';
 import type { AppStackParamList } from '../../../navigation/types';
+import { colors } from '../../../theme/colors';
+import { radius } from '../../../theme/radius';
+import { spacing } from '../../../theme/spacing';
+import { layout } from '../../../theme/layout';
 import { createEvent, deleteEventImage, fetchCategories, uploadEventImage } from '../api';
 import { EventForm, type EventFormSubmission } from '../components/EventForm';
 import { createEmptyEventFormValues } from '../form';
@@ -19,75 +30,65 @@ type CreateEventScreenProps = NativeStackScreenProps<AppStackParamList, 'CreateE
 
 const INITIAL_VALUES = createEmptyEventFormValues();
 
+const STEP_META = [
+  { label: 'Details',  sub: 'Name, category & description' },
+  { label: 'Schedule', sub: 'Date, time & deadline'        },
+  { label: 'Review',   sub: 'Preview & publish'            },
+];
+
 export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
   const { isAuthenticated, isGuest, profile, signOut } = useAppSession();
-  const [categories, setCategories] = useState<EventCategorySummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [screenErrorMessage, setScreenErrorMessage] = useState<string | null>(null);
-  const [submissionErrorMessage, setSubmissionErrorMessage] = useState<string | null>(null);
+  const [categories, setCategories]           = useState<EventCategorySummary[]>([]);
+  const [isLoading, setIsLoading]             = useState(true);
+  const [isSubmitting, setIsSubmitting]       = useState(false);
+  const [screenError, setScreenError]         = useState<string | null>(null);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep]         = useState(0);
+  const scrollRef = useRef<ScrollView | null>(null);
+  const handleDescriptionFocus = useCallback(() => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
+  }, []);
+
+  const heroAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(heroAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, []);
 
   const loadCategories = useCallback(async () => {
     setIsLoading(true);
-
     try {
       const { data, error } = await fetchCategories();
-
-      if (error) {
-        throw error;
-      }
-
+      if (error) throw error;
       setCategories(data);
-      setScreenErrorMessage(null);
-    } catch (error) {
-      setScreenErrorMessage(error instanceof Error ? error.message : 'Unable to load categories right now.');
+      setScreenError(null);
+    } catch (err) {
+      setScreenError(err instanceof Error ? err.message : 'Unable to load categories.');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    void loadCategories();
-  }, [loadCategories]);
+  useEffect(() => { void loadCategories(); }, [loadCategories]);
 
   const handleSubmit = useCallback(
     async ({ selectedImage, values }: EventFormSubmission) => {
-      if (!profile) {
-        setSubmissionErrorMessage('Your account still needs a little setup before you can create events.');
-        return;
-      }
-
+      if (!profile) { setSubmissionError('Account setup required.'); return; }
       setIsSubmitting(true);
-      setSubmissionErrorMessage(null);
-
+      setSubmissionError(null);
       let uploadedImagePath: string | null = null;
       let coverImageUrl = values.coverImageUrl ?? null;
-
       try {
         if (selectedImage) {
           const { data, error } = await uploadEventImage(profile.id, selectedImage);
-
-          if (error || !data) {
-            throw error ?? new Error('Cover image upload failed.');
-          }
-
+          if (error || !data) throw error ?? new Error('Cover image upload failed.');
           uploadedImagePath = data.path;
           coverImageUrl = data.publicUrl;
         }
-
-        const { data, error } = await createEvent(profile.id, {
-          ...values,
-          coverImageUrl,
-        });
-
+        const { data, error } = await createEvent(profile.id, { ...values, coverImageUrl });
         if (error || !data) {
-          if (uploadedImagePath) {
-            await deleteEventImage(uploadedImagePath);
-          }
-
-          throw error ?? new Error('Unable to create the event right now.');
+          if (uploadedImagePath) await deleteEventImage(uploadedImagePath);
+          throw error ?? new Error('Unable to create event.');
         }
-
         navigation.reset({
           index: 1,
           routes: [
@@ -95,8 +96,8 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
             { name: 'EventDetail', params: { eventId: data.id } },
           ],
         });
-      } catch (error) {
-        setSubmissionErrorMessage(error instanceof Error ? error.message : 'Unable to create the event right now.');
+      } catch (err) {
+        setSubmissionError(err instanceof Error ? err.message : 'Unable to create event.');
       } finally {
         setIsSubmitting(false);
       }
@@ -104,129 +105,267 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
     [navigation, profile],
   );
 
+  // ── Guest ──────────────────────────────────────────────────────────────
   if (!isAuthenticated || isGuest) {
     return (
-      <ScreenContainer keyboardAvoiding scroll>
-        <Text style={styles.eyebrow}>Organizer Tools</Text>
-        <Text style={styles.title}>Create Event</Text>
-        <Text style={styles.description}>Guests can browse public events, but creating an event requires a signed-in account.</Text>
-
-        <AccessNotice
-          body="Sign in before creating events, uploading cover images, or managing organizer-only actions."
-          title="Create Event is unavailable in guest mode"
-        />
-
-        <View style={styles.actions}>
-          <PrimaryButton label="Return to Sign In" onPress={() => void signOut()} />
+      <SafeAreaView style={styles.root} edges={[]}>
+        <StatusBar style="light" />
+        <LinearGradient colors={['#060D1F', '#0F1E3D']} style={StyleSheet.absoluteFill} />
+        <View style={styles.centerState}>
+          <View style={[styles.stateIcon, { backgroundColor: 'rgba(148,163,184,0.1)' }]}>
+            <Ionicons name="lock-closed" size={28} color="#94A3B8" />
+          </View>
+          <Text style={styles.stateTitle}>Sign in required</Text>
+          <Text style={styles.stateSub}>Organizer tools are only available for signed-in accounts.</Text>
+          <Pressable style={styles.stateBtn} onPress={() => void signOut()}>
+            <Text style={styles.stateBtnText}>Return to Sign In</Text>
+          </Pressable>
         </View>
-      </ScreenContainer>
+      </SafeAreaView>
     );
   }
 
-  if (!profile) {
+  // ── Loading ────────────────────────────────────────────────────────────
+  if (isLoading) {
     return (
-      <ScreenContainer keyboardAvoiding scroll>
-        <Text style={styles.eyebrow}>Organizer Tools</Text>
-        <Text style={styles.title}>Create Event</Text>
-        <Text style={styles.description}>Your account still needs a little setup before you can publish events.</Text>
-        <AccessNotice
-          body="Please sign out, sign back in, and try again."
-          title="Account setup required"
-        />
-      </ScreenContainer>
+      <SafeAreaView style={styles.root} edges={[]}>
+        <StatusBar style="light" />
+        <LinearGradient colors={['#060D1F', '#0F1E3D']} style={StyleSheet.absoluteFill} />
+        <View style={styles.centerState}>
+          <ActivityIndicator color={colors.primary} size="large" />
+          <Text style={styles.stateTitle}>Loading categories…</Text>
+          <Text style={styles.stateSub}>Preparing your event creation form.</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
-  return (
-    <ScreenContainer keyboardAvoiding scroll>
-      <View style={styles.topRow}>
-        <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons color={colors.softDark} name="chevron-back" size={22} />
-        </Pressable>
-      </View>
-      <Text style={styles.eyebrow}>Organizer Tools</Text>
-      <Text style={styles.title}>Create New Event</Text>
-      <Text style={styles.description}>Add the event details, choose a cover image, and publish it for attendees.</Text>
+  // ── Error ──────────────────────────────────────────────────────────────
+  if (screenError) {
+    return (
+      <SafeAreaView style={styles.root} edges={[]}>
+        <StatusBar style="light" />
+        <LinearGradient colors={['#060D1F', '#0F1E3D']} style={StyleSheet.absoluteFill} />
+        <View style={styles.centerState}>
+          <View style={[styles.stateIcon, { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
+            <Ionicons name="cloud-offline-outline" size={28} color="#EF4444" />
+          </View>
+          <Text style={styles.stateTitle}>Couldn't load categories</Text>
+          <Text style={styles.stateSub}>{screenError}</Text>
+          <Pressable style={styles.stateBtn} onPress={() => void loadCategories()}>
+            <Text style={styles.stateBtnText}>Try Again</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
-      {isLoading ? (
-        <View style={styles.stateCard}>
-          <ActivityIndicator color={colors.primary} />
-          <Text style={styles.stateText}>Preparing event categories...</Text>
+  // ── Main ───────────────────────────────────────────────────────────────
+  return (
+    <SafeAreaView style={styles.root} edges={[]}>
+      <StatusBar style="light" />
+      <LinearGradient colors={['#060D1F', '#0F1E3D', '#060D1F']} style={StyleSheet.absoluteFill} />
+      <View style={styles.orbBlue}   pointerEvents="none" />
+      <View style={styles.orbPurple} pointerEvents="none" />
+
+      <KeyboardAvoidingView
+        behavior="padding"
+        keyboardVerticalOffset={0}
+        style={{ flex: 1, backgroundColor: '#060D1F' }}
+      >
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scrollView}
+          bounces={false} overScrollMode="never"
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          contentContainerStyle={styles.scroll}
+        >
+        {/* ── Hero ── */}
+        <Animated.View
+          style={[
+            styles.hero,
+            {
+              opacity: heroAnim,
+              transform: [{ translateY: heroAnim.interpolate({ inputRange:[0,1], outputRange:[-20,0] }) }],
+            },
+          ]}
+        >
+          <View style={styles.heroTopRow}>
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="chevron-back" size={20} color="#CBD5E1" />
+            </Pressable>
+            <LinearGradient colors={['#2563EB', '#1D4ED8']} style={styles.heroBadge}>
+              <Ionicons name="add-circle-outline" size={22} color="#fff" />
+            </LinearGradient>
+          </View>
+
+          <Text style={styles.heroEyebrow}>Organizer Tools</Text>
+          <Text style={styles.heroTitle}>Create New Event</Text>
+          <Text style={styles.heroSub}>
+            Fill in the details below to publish your event to campus attendees.
+          </Text>
+
+          {/* Synced step tracker */}
+          <View style={styles.stepTracker}>
+            {STEP_META.map((s, i) => {
+              const active    = i === currentStep;
+              const completed = i < currentStep;
+              return (
+                <View
+                  key={s.label}
+                  style={[styles.stepCard, active && styles.stepCardActive, completed && styles.stepCardDone]}
+                >
+                  <View style={[styles.stepBadge, active && styles.stepBadgeActive, completed && styles.stepBadgeDone]}>
+                    {completed
+                      ? <Ionicons name="checkmark" size={13} color="#fff" />
+                      : <Text style={[styles.stepNum, active && { color: '#fff' }]}>{i + 1}</Text>
+                    }
+                  </View>
+                  <View style={styles.stepInfo}>
+                    <Text style={[styles.stepLabel, active && styles.stepLabelActive, completed && styles.stepLabelDone]}>
+                      {s.label}
+                    </Text>
+                    <Text style={styles.stepSub}>{s.sub}</Text>
+                  </View>
+                  {active && (
+                    <View style={styles.activeArrow}>
+                      <Ionicons name="chevron-forward" size={14} color="#60A5FA" />
+                    </View>
+                  )}
+                  {completed && (
+                    <View style={styles.doneCheck}>
+                      <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </Animated.View>
+
+        {/* ── White form sheet ── */}
+        <View style={styles.formSheet}>
+          <View style={styles.formHandle} />
+          <EventForm
+            categories={categories}
+            errorMessage={submissionError}
+            initialValues={INITIAL_VALUES}
+            isSubmitting={isSubmitting}
+            onStepChange={setCurrentStep}
+            onSubmit={handleSubmit}
+            onDescriptionFocus={handleDescriptionFocus}
+            resetKey="create-event"
+            submitLabel={isSubmitting ? 'Creating Event…' : 'Publish Event ✦'}
+          />
         </View>
-      ) : screenErrorMessage ? (
-        <View style={styles.stateCard}>
-          <Text style={styles.errorTitle}>Unable to load categories</Text>
-          <Text style={styles.stateText}>{screenErrorMessage}</Text>
-          <PrimaryButton label="Try Again" onPress={() => void loadCategories()} variant="secondary" />
-        </View>
-      ) : (
-        <EventForm
-          categories={categories}
-          errorMessage={submissionErrorMessage}
-          initialValues={INITIAL_VALUES}
-          isSubmitting={isSubmitting}
-          onSubmit={handleSubmit}
-          resetKey="create-event"
-          submitLabel={isSubmitting ? 'Creating Event...' : 'Create Event'}
-        />
-      )}
-    </ScreenContainer>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  topRow: {
-    marginBottom: spacing.lg,
+  root:   { flex: 1, backgroundColor: '#060D1F' },
+  scroll: { flexGrow: 1, paddingBottom: 0 },
+  scrollView: { flex: 1 },
+
+  orbBlue: {
+    position: 'absolute', top: -80, right: -60,
+    width: 260, height: 260, borderRadius: 130,
+    backgroundColor: '#2563EB', opacity: 0.10,
   },
-  backButton: {
-    alignItems: 'center',
-    borderRadius: 999,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
+  orbPurple: {
+    position: 'absolute', top: 140, left: -80,
+    width: 200, height: 200, borderRadius: 100,
+    backgroundColor: '#7C3AED', opacity: 0.07,
   },
-  eyebrow: {
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    marginBottom: spacing.sm,
-    textTransform: 'uppercase',
+
+  centerState: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: layout.screenPaddingH, gap: 12,
   },
-  title: {
-    color: colors.text,
-    fontSize: 30,
-    fontWeight: '700',
-    marginBottom: spacing.sm,
+  stateIcon: {
+    width: 64, height: 64, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
   },
-  description: {
-    color: colors.textMuted,
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: spacing.lg,
+  stateTitle: { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#F1F5F9', textAlign: 'center' },
+  stateSub:   { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#475569', textAlign: 'center', lineHeight: 20 },
+  stateBtn: {
+    backgroundColor: 'rgba(37,99,235,0.18)', borderRadius: radius.full,
+    paddingHorizontal: 22, paddingVertical: 11, marginTop: 4,
   },
-  stateCard: {
-    alignItems: 'center',
-    backgroundColor: colors.bgCard,
-    borderColor: colors.border,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: spacing.sm,
-    padding: spacing.xl,
+  stateBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#60A5FA' },
+
+  hero: {
+    paddingTop: 52, paddingHorizontal: layout.screenPaddingH, paddingBottom: 24,
   },
-  stateText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 21,
-    textAlign: 'center',
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 22 },
+  backBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  errorTitle: {
-    color: colors.error,
-    fontSize: 18,
-    fontWeight: '700',
+  heroBadge: {
+    width: 48, height: 48, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
   },
-  actions: {
-    gap: spacing.sm,
-    marginTop: spacing.lg,
+  heroEyebrow: {
+    fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#60A5FA',
+    letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6,
+  },
+  heroTitle: {
+    fontFamily: 'Inter_700Bold', fontSize: 28,
+    color: '#F1F5F9', letterSpacing: -0.5, marginBottom: 6,
+  },
+  heroSub: {
+    fontFamily: 'Inter_400Regular', fontSize: 14,
+    color: '#475569', lineHeight: 21, marginBottom: 20,
+  },
+
+  stepTracker: { gap: spacing.xs },
+  stepCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+    borderRadius: radius.md, padding: 12,
+  },
+  stepCardActive: { backgroundColor: 'rgba(37,99,235,0.14)', borderColor: 'rgba(37,99,235,0.32)' },
+  stepCardDone:   { backgroundColor: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.25)' },
+  stepBadge: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stepBadgeActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  stepBadgeDone:   { backgroundColor: '#10B981', borderColor: '#10B981' },
+  stepNum:         { fontFamily: 'Inter_700Bold', fontSize: 12, color: '#475569' },
+  stepInfo:        { flex: 1 },
+  stepLabel:       { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#334155' },
+  stepLabelActive: { color: '#93C5FD' },
+  stepLabelDone:   { color: '#6EE7B7' },
+  stepSub:         { fontFamily: 'Inter_400Regular', fontSize: 11, color: '#334155', marginTop: 1 },
+  activeArrow:     { paddingLeft: 4 },
+  doneCheck:       { paddingLeft: 4 },
+
+  formSheet: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 36, borderTopRightRadius: 36,
+    padding: spacing.lg, paddingTop: 16, paddingBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.15, shadowRadius: 20, elevation: 16,
+  },
+  formHandle: {
+    width: 40, height: 5, borderRadius: 3,
+    backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 20,
   },
 });

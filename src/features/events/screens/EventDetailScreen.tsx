@@ -2,436 +2,645 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  Alert,
+  Animated,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-
-import { EmptyStateCard } from '../../../components/ui/EmptyStateCard';
-import { PrimaryButton } from '../../../components/ui/PrimaryButton';
-import { ScreenContainer } from '../../../components/ui/ScreenContainer';
-import type { AppStackParamList } from '../../../navigation/types';
 import { useAppSession } from '../../../providers/AppSessionProvider';
+import type { AppStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
-import { layout } from '../../../theme/layout';
 import { radius } from '../../../theme/radius';
-import { shadows } from '../../../theme/shadows';
 import { spacing } from '../../../theme/spacing';
-import { typography } from '../../../theme/typography';
-import { deleteEventImageFromPublicUrl, deleteOwnEvent, fetchEventById } from '../api';
+import { layout } from '../../../theme/layout';
+import {
+  deleteEventImageFromPublicUrl,
+  deleteOwnEvent,
+  fetchEventById,
+} from '../api';
 import { formatEventDateTime, formatEventStatus } from '../formatters';
 import type { EventDetail } from '../types';
 
 type EventDetailScreenProps = NativeStackScreenProps<AppStackParamList, 'EventDetail'>;
 
+const STATUS_COLORS: Record<string, { text: string; bg: string }> = {
+  upcoming:  { text: '#60A5FA', bg: 'rgba(96,165,250,0.15)'  },
+  ongoing:   { text: '#34D399', bg: 'rgba(52,211,153,0.15)'  },
+  completed: { text: '#94A3B8', bg: 'rgba(148,163,184,0.15)' },
+  cancelled: { text: '#EF4444', bg: 'rgba(239,68,68,0.15)'   },
+};
+
 export function EventDetailScreen({ navigation, route }: EventDetailScreenProps) {
   const { profile } = useAppSession();
-  const [event, setEvent] = useState<EventDetail | null>(null);
+  const [event, setEvent]         = useState<EventDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  const [isSaved, setIsSaved]     = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const sheetAnim = useRef(new Animated.Value(0)).current;
 
   const loadEvent = useCallback(async () => {
     setIsLoading(true);
-
     try {
       const { data, error } = await fetchEventById(route.params.eventId);
-
-      if (error) {
-        throw error;
-      }
-
-      if (!data) {
-        throw new Error('Event not found. It may have been removed or you may no longer have access to it.');
-      }
-
+      if (error) throw error;
+      if (!data) throw new Error('Event not found or has been removed.');
       setEvent(data);
       setErrorMessage(null);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable to load the event details.');
+      // Animate sheet in
+      Animated.spring(sheetAnim, {
+        toValue: 1, useNativeDriver: true, tension: 65, friction: 10,
+      }).start();
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Unable to load event details.');
     } finally {
       setIsLoading(false);
     }
   }, [route.params.eventId]);
 
-  useFocusEffect(
-    useCallback(() => {
-      void loadEvent();
-    }, [loadEvent]),
-  );
+  useFocusEffect(useCallback(() => { void loadEvent(); }, [loadEvent]));
 
   const isOwner = profile?.id === event?.organizerId;
+  const statusStyle = STATUS_COLORS[event?.status ?? 'upcoming'] ?? STATUS_COLORS.upcoming;
 
-  const detailRows = useMemo(
-    () =>
-      event
-        ? [
-            { icon: 'location-outline', label: event.location },
-            { icon: 'calendar-outline', label: formatEventDateTime(event.startsAt) },
-            { icon: 'time-outline', label: `Register until ${formatEventDateTime(event.registrationDeadline)}` },
-          ]
-        : [],
-    [event],
-  );
+  const detailRows = useMemo(() =>
+    event ? [
+      { icon: 'calendar-outline'  as const, label: 'Date & Time',   value: formatEventDateTime(event.startsAt)            },
+      { icon: 'location-outline'  as const, label: 'Location',      value: event.location                                  },
+      { icon: 'time-outline'      as const, label: 'Register By',   value: formatEventDateTime(event.registrationDeadline) },
+      { icon: 'people-outline'    as const, label: 'Capacity',      value: `${event.remainingSlots} of ${event.capacity} slots available` },
+    ] : [], [event]);
 
-  const handleDelete = useCallback(async () => {
+  async function handleDelete() {
     if (!event || !profile || profile.id !== event.organizerId) {
-      Alert.alert('Delete blocked', 'Only the event owner can delete this event.');
+      Alert.alert('Not allowed', 'Only the event owner can delete this event.');
       return;
     }
-
     setIsDeleting(true);
-
     try {
       const { error } = await deleteOwnEvent(event.id);
-
-      if (error) {
-        throw error;
-      }
-
-      if (event.coverImageUrl) {
-        await deleteEventImageFromPublicUrl(event.coverImageUrl);
-      }
-
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Tabs', params: { screen: 'MyEvents' } }],
-      });
-    } catch (error) {
-      Alert.alert('Unable to delete event', error instanceof Error ? error.message : 'Please try again.');
+      if (error) throw error;
+      if (event.coverImageUrl) await deleteEventImageFromPublicUrl(event.coverImageUrl);
+      navigation.reset({ index: 0, routes: [{ name: 'Tabs', params: { screen: 'MyEvents' } }] });
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Could not delete event.');
       setIsDeleting(false);
     }
-  }, [event, navigation, profile]);
+  }
 
-  const confirmDelete = useCallback(() => {
+  function confirmDelete() {
     Alert.alert(
-      'Delete event?',
-      'This will remove the event record and its public organizer view.',
+      'Delete this event?',
+      'This will permanently remove the event and its cover image. This cannot be undone.',
       [
-        { style: 'cancel', text: 'Cancel' },
-        { style: 'destructive', text: 'Delete', onPress: () => void handleDelete() },
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => void handleDelete() },
       ],
     );
-  }, [handleDelete]);
+  }
 
-  const toggleSaved = useCallback(() => {
-    setIsSaved((current) => !current);
-  }, []);
+  // ── Loading state ──────────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.root} edges={[]}>
+        <StatusBar style="light" />
+        <LinearGradient colors={['#060D1F', '#0F1E3D']} style={StyleSheet.absoluteFill} />
+        <View style={styles.centerState}>
+          <View style={styles.stateIcon}>
+            <Ionicons name="hourglass-outline" size={28} color="#60A5FA" />
+          </View>
+          <Text style={styles.stateTitle}>Loading event…</Text>
+          <Text style={styles.stateSub}>Fetching the latest details.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
+  // ── Error state ────────────────────────────────────────────────────────────
+  if (errorMessage || !event) {
+    return (
+      <SafeAreaView style={styles.root} edges={[]}>
+        <StatusBar style="light" />
+        <LinearGradient colors={['#060D1F', '#0F1E3D']} style={StyleSheet.absoluteFill} />
+        <View style={styles.centerState}>
+          <View style={[styles.stateIcon, { backgroundColor: 'rgba(239,68,68,0.12)' }]}>
+            <Ionicons name="cloud-offline-outline" size={28} color="#EF4444" />
+          </View>
+          <Text style={styles.stateTitle}>Event unavailable</Text>
+          <Text style={styles.stateSub}>{errorMessage ?? 'This event could not be found.'}</Text>
+          <Pressable style={styles.backBtnState} onPress={() => navigation.goBack()}>
+            <Text style={styles.backBtnStateText}>← Go Back</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Main content ───────────────────────────────────────────────────────────
   return (
-    <ScreenContainer noPadding>
+    <SafeAreaView style={styles.root} edges={[]}>
       <StatusBar style="light" />
-      {isLoading ? (
-        <View style={styles.stateWrap}>
-          <EmptyStateCard body="Loading the event details." icon="hourglass-outline" title="Loading event" />
-        </View>
-      ) : errorMessage || !event ? (
-        <View style={styles.stateWrap}>
-          <EmptyStateCard body={errorMessage ?? 'This event is unavailable.'} icon="cloud-offline-outline" title="Unable to load event" />
-        </View>
-      ) : (
-        <View style={styles.screen}>
-          <View style={styles.heroWrap}>
+      <LinearGradient
+        colors={['#0B112F', '#120F46', '#1C1057']}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <ScrollView
+        bounces={false}
+        overScrollMode="never"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+      >
+        {/* ── Hero image ── */}
+        <View style={styles.heroWrap}>
+          {event.coverImageUrl ? (
             <Image
               contentFit="cover"
-              source={event.coverImageUrl ? { uri: event.coverImageUrl } : undefined}
+              source={{ uri: event.coverImageUrl }}
               style={styles.heroImage}
               transition={200}
             />
-            <View style={styles.overlayControls}>
-              <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} style={styles.circleButton}>
-                <Ionicons color={colors.textLight} name="chevron-back" size={22} />
-              </Pressable>
-              <Pressable
-                accessibilityLabel={isSaved ? 'Remove event from favorites' : 'Save event to favorites'}
-                accessibilityRole="button"
-                onPress={toggleSaved}
-                style={styles.circleButton}
-              >
-                <Ionicons color={isSaved ? colors.error : colors.textLight} name={isSaved ? 'heart' : 'heart-outline'} size={18} />
-              </Pressable>
-            </View>
+          ) : (
+            <LinearGradient
+              colors={['#0F172A', '#1E3A8A', '#2563EB']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={styles.heroImage}
+            >
+              <View style={styles.heroPlaceholderIcon}>
+                <Ionicons name="calendar" size={52} color="rgba(255,255,255,0.2)" />
+              </View>
+            </LinearGradient>
+          )}
+
+          {/* Gradient scrim for readability */}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.8)']}
+            style={styles.heroScrim}
+            pointerEvents="none"
+          />
+
+          {/* Overlay controls */}
+          <View style={styles.overlayTop}>
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.overlayBtn, pressed && styles.overlayBtnPressed]}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={isSaved ? 'Remove from saved' : 'Save event'}
+              style={({ pressed }) => [styles.overlayBtn, pressed && styles.overlayBtnPressed]}
+              onPress={() => setIsSaved(v => !v)}
+            >
+              <Ionicons
+                name={isSaved ? 'heart' : 'heart-outline'}
+                size={22}
+                color={isSaved ? '#FF3CAC' : '#fff'}
+              />
+            </Pressable>
           </View>
 
-          <View style={styles.sheet}>
-            <View style={styles.grabber} />
-
-            <View style={styles.titleRow}>
-              <View style={styles.titleCopy}>
-                <Text style={styles.title}>{event.title}</Text>
-                <Text style={styles.status}>{formatEventStatus(event.status)}</Text>
-              </View>
-              <View style={styles.priceChip}>
-                <Text style={styles.priceText}>FREE</Text>
-              </View>
+          {/* Hero bottom info */}
+          <View style={styles.heroBottom}>
+            <View style={[styles.heroBadge, { backgroundColor: statusStyle.bg }]}>
+              <View style={[styles.heroBadgeDot, { backgroundColor: statusStyle.text }]} />
+              <Text style={[styles.heroBadgeText, { color: statusStyle.text }]}>
+                {formatEventStatus(event.status)}
+              </Text>
             </View>
-
-            <View style={styles.metaList}>
-              {detailRows.map((row) => (
-                <View key={row.label} style={styles.metaRow}>
-                  <Ionicons color={colors.primary} name={row.icon as keyof typeof Ionicons.glyphMap} size={16} />
-                  <Text style={styles.metaText}>{row.label}</Text>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.organizerCard}>
-              <View style={styles.organizerAvatar}>
-                <Ionicons color={colors.primaryDeep} name="person" size={20} />
+            {event.isFlagged && (
+              <View style={styles.flaggedBadge}>
+                <Ionicons name="flag" size={12} color="#EF4444" />
+                <Text style={styles.flaggedText}>Flagged</Text>
               </View>
-              <View style={styles.organizerCopy}>
-                <Text style={styles.organizerName}>Event Organizer</Text>
-                <Text style={styles.organizerRole}>{isOwner ? 'You created this event' : 'Hosted by an Eventure organizer'}</Text>
-              </View>
-            </View>
+            )}
+          </View>
 
-            {isOwner && !event.coverImageUrl ? (
-              <View style={styles.ownerImageNotice}>
-                <View style={styles.ownerImageNoticeCopy}>
-                  <Text style={styles.ownerImageNoticeTitle}>Add a cover image</Text>
-                  <Text style={styles.ownerImageNoticeBody}>
-                    This event is already live, but it still needs a visual so it looks polished in the feed.
-                  </Text>
-                </View>
-                <PrimaryButton
-                  label="Add Cover Image"
-                  onPress={() => navigation.navigate('EditEvent', { eventId: event.id })}
-                  variant="secondary"
-                />
-              </View>
-            ) : null}
-
-            <View style={styles.descriptionBlock}>
-              <Text style={styles.sectionTitle}>Description</Text>
-              <Text style={styles.description}>{event.description}</Text>
-            </View>
-
-            {event.tags.length > 0 ? (
-              <View style={styles.tagRow}>
-                {event.tags.map((tag) => (
-                  <View key={tag} style={styles.tagPill}>
-                    <Text style={styles.tagText}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-
-            <View style={styles.actionRow}>
-              <Pressable
-                accessibilityLabel={isSaved ? 'Remove event from saved list' : 'Save event'}
-                accessibilityRole="button"
-                onPress={toggleSaved}
-                style={[styles.bookmarkButton, isSaved ? styles.bookmarkButtonActive : null]}
-              >
-                <Ionicons color={isSaved ? colors.primary : colors.softDark} name={isSaved ? 'bookmark' : 'bookmark-outline'} size={20} />
-              </Pressable>
-              {isOwner ? (
-                <View style={styles.ownerActionStack}>
-                  <PrimaryButton
-                    label={event.coverImageUrl ? 'Edit Event' : 'Edit Event & Image'}
-                    onPress={() => navigation.navigate('EditEvent', { eventId: event.id })}
-                    variant="dark"
-                  />
-                  <PrimaryButton disabled={isDeleting} label={isDeleting ? 'Deleting...' : 'Delete Event'} onPress={confirmDelete} variant="danger" />
-                </View>
-              ) : (
-                <PrimaryButton label="BOOKING SOON" onPress={() => {}} variant="dark" />
-              )}
+          {/* Event title overlay */}
+          <View style={styles.heroTitleOverlay}>
+            <Text style={styles.heroTitle} numberOfLines={2}>{event.title}</Text>
+            <View style={styles.heroFreeBadge}>
+              <Text style={styles.heroFreeText}>FREE</Text>
             </View>
           </View>
         </View>
-      )}
-    </ScreenContainer>
+
+        {/* ── Bottom sheet ── */}
+        <Animated.View
+          style={[
+            styles.sheet,
+            {
+              opacity: sheetAnim,
+              transform: [{ translateY: sheetAnim.interpolate({ inputRange:[0,1], outputRange:[50,0] }) }],
+            },
+          ]}
+        >
+          <View style={styles.grabber} />
+
+          {/* Quick actions */}
+          <View style={styles.quickActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={isSaved ? 'Remove favorite' : 'Save favorite'}
+              style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
+              onPress={() => setIsSaved(v => !v)}
+            >
+              <Ionicons
+                name={isSaved ? 'heart' : 'heart-outline'}
+                size={20}
+                color={isSaved ? '#FF3CAC' : '#6B7280'}
+              />
+              <Text style={styles.quickActionText}>{isSaved ? 'Saved' : 'Save'}</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Share event"
+              style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
+              onPress={() => Alert.alert('Share', 'Sharing feature coming soon! 📤')}
+            >
+              <Ionicons name="share-outline" size={20} color="#6B7280" />
+              <Text style={styles.quickActionText}>Share</Text>
+            </Pressable>
+
+            {isOwner && (
+              <>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit event"
+                  style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
+                  onPress={() => navigation.navigate('EditEvent', { eventId: event.id })}
+                >
+                  <Ionicons name="pencil" size={20} color="#6B7280" />
+                  <Text style={styles.quickActionText}>Edit</Text>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete event"
+                  style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
+                  onPress={confirmDelete}
+                >
+                  <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                  <Text style={[styles.quickActionText, { color: '#EF4444' }]}>Delete</Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Category */}
+          {event.categoryName && (
+            <View style={styles.categorySection}>
+              <View style={styles.categoryPill}>
+                <Ionicons name="pricetag-outline" size={14} color="#6B7280" />
+                <Text style={styles.categoryText}>{event.categoryName}</Text>
+              </View>
+            </View>
+          )}
+
+          {/* ── Detail rows ── */}
+          <View style={styles.detailSection}>
+            <Text style={styles.sectionHeader}>Event Details</Text>
+            <View style={styles.detailCard}>
+              {detailRows.map((row, i) => (
+                <View
+                  key={row.label}
+                  style={[styles.detailRow, i < detailRows.length - 1 && styles.detailRowBorder]}
+                >
+                  <View style={styles.detailIconWrap}>
+                    <Ionicons name={row.icon} size={18} color="#3B82F6" />
+                  </View>
+                  <View style={styles.detailText}>
+                    <Text style={styles.detailLabel}>{row.label}</Text>
+                    <Text style={styles.detailValue}>{row.value}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* ── Organizer card ── */}
+          <View style={styles.organizerSection}>
+            <Text style={styles.sectionHeader}>Organizer</Text>
+            <View style={styles.organizerCard}>
+              <View style={styles.organizerAvatar}>
+                <Ionicons name="person" size={24} color="#3B82F6" />
+              </View>
+              <View style={styles.organizerInfo}>
+                <Text style={styles.organizerName}>Event Organizer</Text>
+                <Text style={styles.organizerRole}>
+                  {isOwner ? '✦ You created this event' : 'Hosted by an Eventure organizer'}
+                </Text>
+              </View>
+              {isOwner && (
+                <View style={styles.ownerBadge}>
+                  <Text style={styles.ownerBadgeText}>Owner</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* ── Missing cover image notice (owner only) ── */}
+          {isOwner && !event.coverImageUrl && (
+            <View style={styles.noticeCard}>
+              <View style={styles.noticeIcon}>
+                <Ionicons name="image-outline" size={22} color="#F59E0B" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.noticeTitle}>Add a cover image</Text>
+                <Text style={styles.noticeSub}>Your event is live but missing a visual — add one to stand out in the feed.</Text>
+              </View>
+            </View>
+          )}
+
+          {/* ── Description ── */}
+          <View style={styles.descSection}>
+            <Text style={styles.sectionTitle}>About this event</Text>
+            <Text style={styles.description}>{event.description}</Text>
+          </View>
+
+          {/* ── Tags ── */}
+          {event.tags.length > 0 && (
+            <View style={styles.tagsSection}>
+              <Text style={styles.sectionTitle}>Tags</Text>
+              <View style={styles.tagsRow}>
+                {event.tags.map(tag => (
+                  <View key={tag} style={styles.tagPill}>
+                    <Text style={styles.tagText}>#{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* ── Actions ── */}
+          <View style={styles.actionsSection}>
+            {!isOwner ? (
+              <Pressable
+                style={({ pressed }) => [styles.bookBtn, pressed && styles.bookBtnPressed]}
+                onPress={() => Alert.alert('Booking', 'Booking feature coming soon! 🎟️')}
+              >
+                <LinearGradient
+                  colors={['#FF3CAC', '#784BA0', '#2B86C5']}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={styles.bookBtnGrad}
+                >
+                  <Text style={styles.bookBtnText}>Register Now</Text>
+                  <View style={styles.bookBtnArrow}>
+                    <Ionicons name="arrow-forward" size={18} color="#784BA0" />
+                  </View>
+                </LinearGradient>
+              </Pressable>
+            ) : (
+              <View style={styles.ownerActionHint}>
+                <Text style={styles.ownerActionHintText}>
+                  Use the quick actions above to manage your event.
+                </Text>
+              </View>
+            )}
+          </View>
+        </Animated.View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  stateWrap: {
-    flex: 1,
-    justifyContent: 'center',
+  root: { flex: 1, backgroundColor: '#060D1F' },
+  scroll: { flexGrow: 1, paddingBottom: 16 },
+
+  // Loading / error states
+  centerState: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: layout.screenPaddingH, gap: 12,
+  },
+  stateIcon: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: 'rgba(96,165,250,0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stateTitle: { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#F1F5F9' },
+  stateSub: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#475569', textAlign: 'center' },
+  backBtnState: {
+    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: radius.full,
+    paddingHorizontal: 20, paddingVertical: 10, marginTop: 8,
+  },
+  backBtnStateText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#CBD5E1' },
+
+  // Hero
+  heroWrap: { height: 380, position: 'relative' },
+  heroImage: { width: '100%', height: '100%' },
+  heroPlaceholderIcon: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  heroScrim: { ...StyleSheet.absoluteFillObject },
+  overlayTop: {
+    position: 'absolute', top: 52, left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'space-between',
     paddingHorizontal: layout.screenPaddingH,
   },
-  screen: {
-    flex: 1,
+  overlayBtn: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2, shadowRadius: 4, elevation: 4,
   },
-  heroWrap: {
-    height: 320,
+  overlayBtnPressed: { opacity: 0.7, backgroundColor: 'rgba(0,0,0,0.6)' },
+  heroBottom: {
+    position: 'absolute', bottom: 20, left: layout.screenPaddingH,
+    flexDirection: 'row', gap: 10, alignItems: 'center',
   },
-  heroImage: {
-    backgroundColor: '#CBD5E1',
-    height: '100%',
-    width: '100%',
+  heroBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
   },
-  overlayControls: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    left: 0,
-    paddingHorizontal: layout.screenPaddingH,
-    paddingTop: spacing.xxl,
-    position: 'absolute',
-    right: 0,
+  heroBadgeDot: { width: 8, height: 8, borderRadius: 4 },
+  heroBadgeText: { fontFamily: 'Inter_700Bold', fontSize: 12, letterSpacing: 0.3, textTransform: 'uppercase' },
+  flaggedBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(239,68,68,0.2)',
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20,
   },
-  circleButton: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(15,23,42,0.42)',
-    borderRadius: radius.full,
-    height: 42,
-    justifyContent: 'center',
-    width: 42,
+  flaggedText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#EF4444' },
+  heroTitleOverlay: {
+    position: 'absolute', bottom: 60, left: layout.screenPaddingH, right: layout.screenPaddingH,
   },
+  heroTitle: { fontFamily: 'Inter_800ExtraBold', fontSize: 32, color: '#fff', lineHeight: 40, letterSpacing: -0.8, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+  heroFreeBadge: { marginTop: 12, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 24 },
+  heroFreeText: { fontFamily: 'Inter_700Bold', fontSize: 14, color: '#1F2937', letterSpacing: 0.5 },
+
+  // Sheet
   sheet: {
-    backgroundColor: colors.bgCard,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    gap: spacing.lg,
-    marginTop: -36,
-    minHeight: 420,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 36, borderTopRightRadius: 36,
+    marginTop: -32, paddingTop: 24,
     paddingHorizontal: layout.screenPaddingH,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 80, gap: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -16 },
+    shadowOpacity: 0.1, shadowRadius: 32, elevation: 16,
   },
   grabber: {
-    alignSelf: 'center',
-    backgroundColor: '#E2E8F0',
-    borderRadius: radius.full,
-    height: 5,
-    width: 44,
+    width: 40, height: 5, borderRadius: 3,
+    backgroundColor: '#D1D5DB', alignSelf: 'center',
   },
-  titleRow: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    gap: spacing.md,
-    justifyContent: 'space-between',
+
+  // Quick actions
+  quickActions: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 8 },
+  quickActionBtn: {
+    alignItems: 'center', gap: 4, paddingVertical: 12, paddingHorizontal: 8,
+    borderRadius: 12, backgroundColor: '#F9FAFB',
+    borderWidth: 1, borderColor: '#E5E7EB',
+    minWidth: 60,
   },
-  titleCopy: {
-    flex: 1,
-    gap: spacing.xs,
+  quickActionBtnPressed: { opacity: 0.8, backgroundColor: '#F3F4F6' },
+  quickActionText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#6B7280' },
+
+  divider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 8 },
+
+  // Category
+  categorySection: { alignItems: 'flex-start' },
+  categoryPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#D1D5DB',
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
   },
-  title: {
-    ...typography.h4,
-    color: colors.text,
+  categoryText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#374151' },
+
+  // Sections
+  sectionHeader: { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#111827', marginBottom: 12 },
+  detailSection: { gap: 12 },
+  organizerSection: { gap: 12 },
+
+  // Title section
+  titleSection: { gap: 16 },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm, alignItems: 'flex-start' },
+  titleBlock: { flex: 1, minWidth: 0, gap: 12 },
+  title: { fontFamily: 'Inter_800ExtraBold', fontSize: 28, color: '#1F2937', flex: 1, lineHeight: 36, letterSpacing: -0.5 },
+  freeBadge: { alignSelf: 'flex-start', backgroundColor: '#F3F4F6', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#D1D5DB' },
+  freeText: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#374151', letterSpacing: 0.5 },
+
+  // Detail card
+  detailCard: {
+    backgroundColor: '#FAFAFA', borderRadius: 20,
+    borderWidth: 1, borderColor: '#F3F4F6', overflow: 'hidden',
   },
-  status: {
-    ...typography.body2,
-    color: colors.textMuted,
+  detailRow: { flexDirection: 'row', alignItems: 'center', padding: 18, gap: 14 },
+  detailRowBorder: { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  detailIconWrap: {
+    width: 44, height: 44, borderRadius: 14,
+    backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center',
   },
-  priceChip: {
-    backgroundColor: '#DBEAFE',
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  priceText: {
-    ...typography.caption3,
-    color: colors.primaryDeep,
-  },
-  metaList: {
-    gap: spacing.sm,
-  },
-  metaRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  metaText: {
-    ...typography.body2,
-    color: colors.softDark,
-    flex: 1,
-  },
+  detailText: { flex: 1, gap: 4 },
+  detailLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.8 },
+  detailValue: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#111827', lineHeight: 24 },
+
+  // Organizer
   organizerCard: {
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: radius.lg,
-    flexDirection: 'row',
-    gap: spacing.md,
-    padding: spacing.md,
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    backgroundColor: '#FAFAFA', borderRadius: 20,
+    borderWidth: 1, borderColor: '#F3F4F6',
+    padding: 18,
   },
   organizerAvatar: {
-    alignItems: 'center',
-    backgroundColor: '#DBEAFE',
-    borderRadius: radius.full,
-    height: 52,
-    justifyContent: 'center',
-    width: 52,
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center',
   },
-  organizerCopy: {
-    flex: 1,
-    gap: 2,
+  organizerInfo: { flex: 1, gap: 4 },
+  organizerName: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#111827' },
+  organizerRole: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#6B7280', lineHeight: 20 },
+  ownerBadge: {
+    backgroundColor: '#ECFDF5', paddingHorizontal: 14, paddingVertical: 6,
+    borderRadius: 18, borderWidth: 1, borderColor: '#A7F3D0',
   },
-  organizerName: {
-    ...typography.button1,
-    color: colors.text,
+  ownerBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#059669' },
+
+  // Notice
+  noticeCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 14,
+    backgroundColor: '#FEF3C7', borderRadius: 20,
+    borderWidth: 1, borderColor: '#FCD34D',
+    padding: 18,
   },
-  organizerRole: {
-    ...typography.caption2,
-    color: colors.textMuted,
+  noticeIcon: {
+    width: 44, height: 44, borderRadius: 14,
+    backgroundColor: 'rgba(251,191,36,0.15)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  ownerImageNotice: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#DBEAFE',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    gap: spacing.md,
-    padding: spacing.md,
-  },
-  ownerImageNoticeCopy: {
-    gap: spacing.xs,
-  },
-  ownerImageNoticeTitle: {
-    ...typography.button1,
-    color: colors.text,
-  },
-  ownerImageNoticeBody: {
-    ...typography.body2,
-    color: colors.textMuted,
-  },
-  descriptionBlock: {
-    gap: spacing.sm,
-  },
-  sectionTitle: {
-    ...typography.h5,
-    color: colors.text,
-  },
-  description: {
-    ...typography.body2,
-    color: colors.textMuted,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
+  noticeTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#92400E' },
+  noticeSub: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#B45309', lineHeight: 22, marginTop: 4 },
+
+  // Description + tags
+  descSection: { gap: 12 },
+  tagsSection: { gap: 12 },
+  sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 19, color: '#111827', marginBottom: 8 },
+  description: { fontFamily: 'Inter_400Regular', fontSize: 16, color: '#374151', lineHeight: 26 },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   tagPill: {
-    backgroundColor: colors.bgInfo,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    backgroundColor: '#F3F4F6', borderRadius: 18,
+    borderWidth: 1, borderColor: '#E5E7EB',
+    paddingHorizontal: 16, paddingVertical: 8,
   },
-  tagText: {
-    ...typography.caption3,
-    color: colors.primaryDeep,
+  tagText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#4B5563' },
+
+  // Actions
+  actionsSection: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center', justifyContent: 'center' },
+  ownerActionHint: { flex: 1, padding: 18, backgroundColor: '#F9FAFB', borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB' },
+  ownerActionHintText: { fontFamily: 'Inter_500Medium', fontSize: 15, color: '#6B7280', textAlign: 'center', lineHeight: 22 },
+  cardActions: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  iconAction: {
+    width: 48, height: 48, borderRadius: 20,
+    backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 4,
   },
-  actionRow: {
-    alignItems: 'stretch',
-    flexDirection: 'row',
-    gap: spacing.sm,
+  iconActionPressed: { opacity: 0.8, backgroundColor: '#F3F4F6' },
+  bookmarkBtn: {
+    width: 56, height: 56, borderRadius: 16,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1, borderColor: '#E5E7EB',
+    alignItems: 'center', justifyContent: 'center',
   },
-  bookmarkButton: {
-    alignItems: 'center',
-    backgroundColor: colors.bgCard,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    height: 54,
-    justifyContent: 'center',
-    width: 54,
+  bookmarkBtnActive: { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' },
+
+  ownerActions: { flex: 1, gap: spacing.sm },
+  editBtn: { borderRadius: 16, overflow: 'hidden' },
+  editBtnGrad: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    minHeight: 56, gap: 8,
   },
-  bookmarkButtonActive: {
-    backgroundColor: colors.bgInfo,
-    borderColor: '#93C5FD',
+  editBtnText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#fff' },
+  deleteBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA',
+    borderRadius: 16, minHeight: 50, gap: 8,
   },
-  ownerActionStack: {
-    flex: 1,
-    gap: spacing.sm,
+  deleteBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: '#DC2626' },
+
+  bookBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
+  bookBtnPressed: { opacity: 0.9 },
+  bookBtnGrad: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    minHeight: 60, gap: 10,
+  },
+  bookBtnText: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#fff' },
+  bookBtnArrow: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    alignItems: 'center', justifyContent: 'center',
   },
 });
