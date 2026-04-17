@@ -1,15 +1,26 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-
-import { AccessNotice } from '../../../components/ui/AccessNotice';
-import { PrimaryButton } from '../../../components/ui/PrimaryButton';
-import { ScreenContainer } from '../../../components/ui/ScreenContainer';
-import type { AppStackParamList } from '../../../navigation/types';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useAppSession } from '../../../providers/AppSessionProvider';
+import type { AppStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
+import { radius } from '../../../theme/radius';
 import { spacing } from '../../../theme/spacing';
+import { layout } from '../../../theme/layout';
 import {
   deleteEventImage,
   deleteEventImageFromPublicUrl,
@@ -24,98 +35,83 @@ import type { EventCategorySummary, EventDetail } from '../types';
 
 type EditEventScreenProps = NativeStackScreenProps<AppStackParamList, 'EditEvent'>;
 
+const STEP_META = [
+  { label: 'Details',  sub: 'Name, category & description' },
+  { label: 'Schedule', sub: 'Date, time & deadline'        },
+  { label: 'Review',   sub: 'Preview & save'               },
+];
+
 export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
   const { isAuthenticated, isGuest, profile, signOut } = useAppSession();
-  const [event, setEvent] = useState<EventDetail | null>(null);
-  const [categories, setCategories] = useState<EventCategorySummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [screenErrorMessage, setScreenErrorMessage] = useState<string | null>(null);
-  const [submissionErrorMessage, setSubmissionErrorMessage] = useState<string | null>(null);
+  const [event, setEvent]                     = useState<EventDetail | null>(null);
+  const [categories, setCategories]           = useState<EventCategorySummary[]>([]);
+  const [isLoading, setIsLoading]             = useState(true);
+  const [isSubmitting, setIsSubmitting]       = useState(false);
+  const [screenError, setScreenError]         = useState<string | null>(null);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep]         = useState(0);
+  const scrollRef = useRef<ScrollView | null>(null);
+  const handleDescriptionFocus = useCallback(() => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
+  }, []);
+
+  // Memoize so the form doesn't reset on every re-render
+  const initialValues = useMemo(
+    () => (event ? mapEventDetailToFormValues(event) : null),
+    [event],
+  );
+
+  const heroAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(heroAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, []);
 
   const loadEditorData = useCallback(async () => {
     setIsLoading(true);
-
     try {
-      const [{ data: nextEvent, error: eventError }, { data: nextCategories, error: categoriesError }] =
+      const [{ data: nextEvent, error: eventError }, { data: nextCats, error: catError }] =
         await Promise.all([fetchEventById(route.params.eventId), fetchCategories()]);
-
-      if (eventError) {
-        throw eventError;
-      }
-
-      if (categoriesError) {
-        throw categoriesError;
-      }
-
-      if (!nextEvent) {
-        throw new Error('Event not found. It may have been deleted or you may not have access to it.');
-      }
-
+      if (eventError) throw eventError;
+      if (catError) throw catError;
+      if (!nextEvent) throw new Error('Event not found or has been deleted.');
       setEvent(nextEvent);
-      setCategories(nextCategories);
-      setScreenErrorMessage(null);
-    } catch (error) {
-      setScreenErrorMessage(error instanceof Error ? error.message : 'Unable to load this event for editing.');
+      setCategories(nextCats);
+      setScreenError(null);
+    } catch (err) {
+      setScreenError(err instanceof Error ? err.message : 'Unable to load this event for editing.');
     } finally {
       setIsLoading(false);
     }
   }, [route.params.eventId]);
 
-  useEffect(() => {
-    void loadEditorData();
-  }, [loadEditorData]);
+  useEffect(() => { void loadEditorData(); }, [loadEditorData]);
 
   const handleSubmit = useCallback(
     async ({ coverImageChanged, originalCoverImageUrl, selectedImage, values }: EventFormSubmission) => {
-      if (!profile || !event) {
-        setSubmissionErrorMessage('This event is no longer available for editing.');
-        return;
-      }
-
-      if (profile.id !== event.organizerId) {
-        setSubmissionErrorMessage('Only the event owner can update this event.');
-        return;
-      }
-
+      if (!profile || !event) { setSubmissionError('Event is no longer available.'); return; }
+      if (profile.id !== event.organizerId) { setSubmissionError('Only the event owner can update this.'); return; }
       setIsSubmitting(true);
-      setSubmissionErrorMessage(null);
-
+      setSubmissionError(null);
       let uploadedImagePath: string | null = null;
       let nextCoverImageUrl = values.coverImageUrl ?? null;
-
       try {
         if (selectedImage) {
           const { data, error } = await uploadEventImage(profile.id, selectedImage);
-
-          if (error || !data) {
-            throw error ?? new Error('Cover image upload failed.');
-          }
-
+          if (error || !data) throw error ?? new Error('Cover image upload failed.');
           uploadedImagePath = data.path;
           nextCoverImageUrl = data.publicUrl;
         }
-
-        const { error } = await updateOwnEvent(event.id, {
-          ...values,
-          coverImageUrl: nextCoverImageUrl,
-        });
-
+        const { error } = await updateOwnEvent(event.id, { ...values, coverImageUrl: nextCoverImageUrl });
         if (error) {
-          if (uploadedImagePath) {
-            await deleteEventImage(uploadedImagePath);
-          }
-
+          if (uploadedImagePath) await deleteEventImage(uploadedImagePath);
           throw error;
         }
-
         if (coverImageChanged && originalCoverImageUrl && originalCoverImageUrl !== nextCoverImageUrl) {
           await deleteEventImageFromPublicUrl(originalCoverImageUrl);
         }
-
         navigation.replace('EventDetail', { eventId: event.id });
-      } catch (error) {
-        setSubmissionErrorMessage(error instanceof Error ? error.message : 'Unable to update the event right now.');
+      } catch (err) {
+        setSubmissionError(err instanceof Error ? err.message : 'Unable to update event.');
       } finally {
         setIsSubmitting(false);
       }
@@ -123,172 +119,334 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
     [event, navigation, profile],
   );
 
+  // ── Guard: guest ───────────────────────────────────────────────────────
   if (!isAuthenticated || isGuest) {
     return (
-      <ScreenContainer keyboardAvoiding scroll>
-        <Text style={styles.eyebrow}>Organizer Tools</Text>
-        <Text style={styles.title}>Edit Event</Text>
-        <Text style={styles.description}>Editing an event requires the organizer account that created it.</Text>
-        <AccessNotice
-          body="Sign in with the organizer account before editing or deleting event records."
-          title="Edit Event is unavailable in guest mode"
-        />
-        <View style={styles.actions}>
-          <PrimaryButton label="Return to Sign In" onPress={() => void signOut()} />
+      <SafeAreaView style={styles.root} edges={[]}>
+        <StatusBar style="light" />
+        <LinearGradient colors={['#060D1F', '#0F1E3D']} style={StyleSheet.absoluteFill} />
+        <View style={styles.centerState}>
+          <View style={[styles.stateIcon, { backgroundColor: 'rgba(148,163,184,0.1)' }]}>
+            <Ionicons name="lock-closed" size={28} color="#94A3B8" />
+          </View>
+          <Text style={styles.stateTitle}>Sign in required</Text>
+          <Text style={styles.stateSub}>Editing events requires a signed-in organizer account.</Text>
+          <Pressable style={styles.stateBtn} onPress={() => void signOut()}>
+            <Text style={styles.stateBtnText}>Return to Sign In</Text>
+          </Pressable>
         </View>
-      </ScreenContainer>
+      </SafeAreaView>
     );
   }
 
-  if (!profile) {
-    return (
-      <ScreenContainer keyboardAvoiding scroll>
-        <Text style={styles.eyebrow}>Organizer Tools</Text>
-        <Text style={styles.title}>Edit Event</Text>
-        <Text style={styles.description}>Your account still needs a little setup before you can edit events.</Text>
-        <AccessNotice
-          body="Please sign out, sign back in, and try again."
-          title="Account setup required"
-        />
-      </ScreenContainer>
-    );
-  }
-
+  // ── Guard: loading ─────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <ScreenContainer keyboardAvoiding scroll>
-        <Text style={styles.eyebrow}>Organizer Tools</Text>
-        <Text style={styles.title}>Edit Event</Text>
-        <View style={styles.stateCard}>
-          <ActivityIndicator color={colors.primary} />
-          <Text style={styles.stateText}>Loading this event...</Text>
+      <SafeAreaView style={styles.root} edges={[]}>
+        <StatusBar style="light" />
+        <LinearGradient colors={['#060D1F', '#0F1E3D']} style={StyleSheet.absoluteFill} />
+        <View style={styles.centerState}>
+          <ActivityIndicator color={colors.primary} size="large" />
+          <Text style={styles.stateTitle}>Loading event…</Text>
+          <Text style={styles.stateSub}>Fetching your event details and categories.</Text>
         </View>
-      </ScreenContainer>
+      </SafeAreaView>
     );
   }
 
-  if (screenErrorMessage) {
+  // ── Guard: screen error ────────────────────────────────────────────────
+  if (screenError) {
     return (
-      <ScreenContainer keyboardAvoiding scroll>
-        <Text style={styles.eyebrow}>Organizer Tools</Text>
-        <Text style={styles.title}>Edit Event</Text>
-        <View style={styles.stateCard}>
-          <Text style={styles.errorTitle}>Unable to load this event</Text>
-          <Text style={styles.stateText}>{screenErrorMessage}</Text>
-          <PrimaryButton label="Try Again" onPress={() => void loadEditorData()} variant="secondary" />
+      <SafeAreaView style={styles.root} edges={[]}>
+        <StatusBar style="light" />
+        <LinearGradient colors={['#060D1F', '#0F1E3D']} style={StyleSheet.absoluteFill} />
+        <View style={styles.centerState}>
+          <View style={[styles.stateIcon, { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
+            <Ionicons name="cloud-offline-outline" size={28} color="#EF4444" />
+          </View>
+          <Text style={styles.stateTitle}>Couldn't load event</Text>
+          <Text style={styles.stateSub}>{screenError}</Text>
+          <View style={styles.stateBtnRow}>
+            <Pressable style={styles.stateBtn} onPress={() => void loadEditorData()}>
+              <Text style={styles.stateBtnText}>Try Again</Text>
+            </Pressable>
+            <Pressable style={styles.stateSecBtn} onPress={() => navigation.goBack()}>
+              <Text style={styles.stateSecBtnText}>Go Back</Text>
+            </Pressable>
+          </View>
         </View>
-      </ScreenContainer>
+      </SafeAreaView>
     );
   }
 
+  // ── Guard: not found ───────────────────────────────────────────────────
   if (!event) {
     return (
-      <ScreenContainer keyboardAvoiding scroll>
-        <Text style={styles.eyebrow}>Organizer Tools</Text>
-        <Text style={styles.title}>Edit Event</Text>
-        <View style={styles.stateCard}>
-          <Text style={styles.errorTitle}>Event unavailable</Text>
-          <Text style={styles.stateText}>This event could not be found.</Text>
-          <PrimaryButton label="Back to Details" onPress={() => navigation.replace('EventDetail', { eventId: route.params.eventId })} variant="secondary" />
+      <SafeAreaView style={styles.root} edges={[]}>
+        <StatusBar style="light" />
+        <LinearGradient colors={['#060D1F', '#0F1E3D']} style={StyleSheet.absoluteFill} />
+        <View style={styles.centerState}>
+          <View style={[styles.stateIcon, { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
+            <Ionicons name="search-outline" size={28} color="#EF4444" />
+          </View>
+          <Text style={styles.stateTitle}>Event not found</Text>
+          <Text style={styles.stateSub}>This event could not be located.</Text>
+          <Pressable
+            style={styles.stateBtn}
+            onPress={() => navigation.replace('EventDetail', { eventId: route.params.eventId })}
+          >
+            <Text style={styles.stateBtnText}>Back to Event</Text>
+          </Pressable>
         </View>
-      </ScreenContainer>
+      </SafeAreaView>
     );
   }
 
-  if (profile.id !== event.organizerId) {
+  // ── Guard: not owner ───────────────────────────────────────────────────
+  if (profile && profile.id !== event.organizerId) {
     return (
-      <ScreenContainer keyboardAvoiding scroll>
-        <Text style={styles.eyebrow}>Organizer Tools</Text>
-        <Text style={styles.title}>Edit Event</Text>
-        <Text style={styles.description}>Only the organizer who created this event can edit or delete it.</Text>
-        <AccessNotice
-          body="Open an event you own from My Events to edit its details."
-          title="You do not own this event"
-        />
-        <View style={styles.actions}>
-          <PrimaryButton label="Back to Event Details" onPress={() => navigation.replace('EventDetail', { eventId: event.id })} variant="secondary" />
+      <SafeAreaView style={styles.root} edges={[]}>
+        <StatusBar style="light" />
+        <LinearGradient colors={['#060D1F', '#0F1E3D']} style={StyleSheet.absoluteFill} />
+        <View style={styles.centerState}>
+          <View style={[styles.stateIcon, { backgroundColor: 'rgba(251,191,36,0.1)' }]}>
+            <Ionicons name="shield-outline" size={28} color="#FBBF24" />
+          </View>
+          <Text style={styles.stateTitle}>Not your event</Text>
+          <Text style={styles.stateSub}>Only the organizer who created this event can edit it.</Text>
+          <Pressable
+            style={styles.stateBtn}
+            onPress={() => navigation.replace('EventDetail', { eventId: event.id })}
+          >
+            <Text style={styles.stateBtnText}>View Event Details</Text>
+          </Pressable>
         </View>
-      </ScreenContainer>
+      </SafeAreaView>
     );
   }
 
+  // ── Main ───────────────────────────────────────────────────────────────
   return (
-    <ScreenContainer keyboardAvoiding scroll>
-      <View style={styles.topRow}>
-        <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons color={colors.softDark} name="chevron-back" size={22} />
-        </Pressable>
-      </View>
-      <Text style={styles.eyebrow}>Organizer Tools</Text>
-      <Text style={styles.title}>Edit Event</Text>
-      <Text style={styles.description}>Update the event details, schedule, and cover image in one place.</Text>
+    <SafeAreaView style={styles.root} edges={[]}>
+      <StatusBar style="light" />
+      <LinearGradient colors={['#060D1F', '#1A1005', '#060D1F']} style={StyleSheet.absoluteFill} />
+      <View style={styles.orbAmber}  pointerEvents="none" />
+      <View style={styles.orbBlue}   pointerEvents="none" />
 
-      <EventForm
-        categories={categories}
-        errorMessage={submissionErrorMessage}
-        initialValues={mapEventDetailToFormValues(event)}
-        isSubmitting={isSubmitting}
-        onSubmit={handleSubmit}
-        resetKey={`${event.id}:${event.updatedAt}`}
-        submitLabel={isSubmitting ? 'Saving Changes...' : 'Save Changes'}
-      />
-    </ScreenContainer>
+      <KeyboardAvoidingView
+        behavior="padding"
+        keyboardVerticalOffset={0}
+        style={{ flex: 1, backgroundColor: '#060D1F' }}
+      >
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scrollView}
+          bounces={false} overScrollMode="never"
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          contentContainerStyle={styles.scroll}
+        >
+        {/* ── Hero ── */}
+        <Animated.View
+          style={[
+            styles.hero,
+            {
+              opacity: heroAnim,
+              transform: [{ translateY: heroAnim.interpolate({ inputRange:[0,1], outputRange:[-20,0] }) }],
+            },
+          ]}
+        >
+          <View style={styles.heroTopRow}>
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="chevron-back" size={20} color="#CBD5E1" />
+            </Pressable>
+            {/* Amber badge — distinct from Create blue */}
+            <LinearGradient colors={['#D97706', '#F59E0B']} style={styles.heroBadge}>
+              <Ionicons name="pencil" size={20} color="#fff" />
+            </LinearGradient>
+          </View>
+
+          <Text style={styles.heroEyebrow}>Organizer Tools</Text>
+          <Text style={styles.heroTitle}>Edit Event</Text>
+          <Text style={styles.heroSub}>
+            Update the details, schedule, or cover image for your event.
+          </Text>
+
+          {/* Editing chip */}
+          <View style={styles.editingChip}>
+            <Ionicons name="calendar-outline" size={13} color="#FBBF24" />
+            <Text style={styles.editingChipText} numberOfLines={1}>{event.title}</Text>
+          </View>
+
+          {/* Synced step tracker */}
+          <View style={styles.stepTracker}>
+            {STEP_META.map((s, i) => {
+              const active    = i === currentStep;
+              const completed = i < currentStep;
+              return (
+                <View
+                  key={s.label}
+                  style={[styles.stepCard, active && styles.stepCardActive, completed && styles.stepCardDone]}
+                >
+                  <View style={[styles.stepBadge, active && styles.stepBadgeActive, completed && styles.stepBadgeDone]}>
+                    {completed
+                      ? <Ionicons name="checkmark" size={13} color="#fff" />
+                      : <Text style={[styles.stepNum, active && { color: '#fff' }]}>{i + 1}</Text>
+                    }
+                  </View>
+                  <View style={styles.stepInfo}>
+                    <Text style={[styles.stepLabel, active && styles.stepLabelActive, completed && styles.stepLabelDone]}>
+                      {s.label}
+                    </Text>
+                    <Text style={styles.stepSub}>{s.sub}</Text>
+                  </View>
+                  {active    && <View style={styles.indicator}><Ionicons name="chevron-forward" size={14} color="#FBBF24" /></View>}
+                  {completed && <View style={styles.indicator}><Ionicons name="checkmark-circle" size={16} color="#10B981" /></View>}
+                </View>
+              );
+            })}
+          </View>
+        </Animated.View>
+
+        {/* ── White form sheet ── */}
+        <View style={styles.formSheet}>
+          <View style={styles.formHandle} />
+          <EventForm
+            categories={categories}
+            errorMessage={submissionError}
+            initialValues={initialValues!}
+            isSubmitting={isSubmitting}
+            onStepChange={setCurrentStep}
+            onSubmit={handleSubmit}
+            onDescriptionFocus={handleDescriptionFocus}
+            resetKey={`${event.id}:${event.updatedAt}`}
+            submitLabel={isSubmitting ? 'Saving Changes…' : 'Save Changes ✦'}
+          />
+        </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  topRow: {
-    marginBottom: spacing.lg,
+  root:   { flex: 1, backgroundColor: '#060D1F' },
+  scroll: { flexGrow: 1, paddingBottom: 0 },
+  scrollView: { flex: 1 },
+
+  orbAmber: {
+    position: 'absolute', top: -60, left: -60,
+    width: 240, height: 240, borderRadius: 120,
+    backgroundColor: '#F59E0B', opacity: 0.07,
   },
-  backButton: {
-    alignItems: 'center',
-    borderRadius: 999,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
+  orbBlue: {
+    position: 'absolute', top: 160, right: -60,
+    width: 200, height: 200, borderRadius: 100,
+    backgroundColor: '#2563EB', opacity: 0.07,
   },
-  eyebrow: {
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    marginBottom: spacing.sm,
-    textTransform: 'uppercase',
+
+  centerState: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: layout.screenPaddingH, gap: 12,
   },
-  title: {
-    color: colors.text,
-    fontSize: 30,
-    fontWeight: '700',
-    marginBottom: spacing.sm,
+  stateIcon: {
+    width: 64, height: 64, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
   },
-  description: {
-    color: colors.textMuted,
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: spacing.lg,
+  stateTitle: { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#F1F5F9', textAlign: 'center' },
+  stateSub:   { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#475569', textAlign: 'center', lineHeight: 20 },
+  stateBtnRow:{ flexDirection: 'row', gap: spacing.sm },
+  stateBtn: {
+    backgroundColor: 'rgba(245,158,11,0.15)', borderRadius: radius.full,
+    paddingHorizontal: 22, paddingVertical: 11, marginTop: 4,
   },
-  stateCard: {
-    alignItems: 'center',
-    backgroundColor: colors.bgCard,
-    borderColor: colors.border,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: spacing.sm,
-    padding: spacing.xl,
+  stateBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#FBBF24' },
+  stateSecBtn: {
+    backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: radius.full,
+    paddingHorizontal: 22, paddingVertical: 11, marginTop: 4,
   },
-  stateText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 21,
-    textAlign: 'center',
+  stateSecBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#64748B' },
+
+  hero: {
+    paddingTop: 52, paddingHorizontal: layout.screenPaddingH, paddingBottom: 24,
   },
-  errorTitle: {
-    color: colors.error,
-    fontSize: 18,
-    fontWeight: '700',
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 22 },
+  backBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  actions: {
-    gap: spacing.sm,
-    marginTop: spacing.lg,
+  heroBadge: {
+    width: 48, height: 48, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  heroEyebrow: {
+    fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#FBBF24',
+    letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6,
+  },
+  heroTitle: {
+    fontFamily: 'Inter_700Bold', fontSize: 28,
+    color: '#F1F5F9', letterSpacing: -0.5, marginBottom: 6,
+  },
+  heroSub: {
+    fontFamily: 'Inter_400Regular', fontSize: 14,
+    color: '#475569', lineHeight: 21, marginBottom: 14,
+  },
+  editingChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(245,158,11,0.1)',
+    borderWidth: 1, borderColor: 'rgba(245,158,11,0.25)',
+    borderRadius: radius.full, paddingHorizontal: 12, paddingVertical: 7,
+    marginBottom: 16,
+  },
+  editingChipText: {
+    fontFamily: 'Inter_600SemiBold', fontSize: 12,
+    color: '#FBBF24', maxWidth: 220,
+  },
+
+  stepTracker: { gap: spacing.xs },
+  stepCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+    borderRadius: radius.md, padding: 12,
+  },
+  stepCardActive: { backgroundColor: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.28)' },
+  stepCardDone:   { backgroundColor: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.25)' },
+  stepBadge: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stepBadgeActive: { backgroundColor: '#F59E0B', borderColor: '#F59E0B' },
+  stepBadgeDone:   { backgroundColor: '#10B981', borderColor: '#10B981' },
+  stepNum:         { fontFamily: 'Inter_700Bold', fontSize: 12, color: '#475569' },
+  stepInfo:        { flex: 1 },
+  stepLabel:       { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#334155' },
+  stepLabelActive: { color: '#FDE68A' },
+  stepLabelDone:   { color: '#6EE7B7' },
+  stepSub:         { fontFamily: 'Inter_400Regular', fontSize: 11, color: '#334155', marginTop: 1 },
+  indicator:       { paddingLeft: 4 },
+
+  formSheet: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 36, borderTopRightRadius: 36,
+    padding: spacing.lg, paddingTop: 16, paddingBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.15, shadowRadius: 20, elevation: 16,
+  },
+  formHandle: {
+    width: 40, height: 5, borderRadius: 3,
+    backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 20,
   },
 });
