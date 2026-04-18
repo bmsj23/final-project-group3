@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   },
   body: {
     backgroundColor: colors.background,
-    gap: spacing.lg,
+    gap: spacing.xl,
     paddingBottom: spacing.xxl,
     paddingHorizontal: layout.screenPaddingH,
     paddingTop: spacing.xl,
@@ -321,6 +321,7 @@ const styles = StyleSheet.create({
   featuredRow: {
     flexDirection: 'row',
     gap: spacing.md,
+    paddingBottom: spacing.sm,
     paddingLeft: layout.screenPaddingH,
     paddingRight: layout.screenPaddingH,
   },
