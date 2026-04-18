@@ -20,6 +20,10 @@ export type AppStackParamList = {
   CreateEvent: undefined;
   EventDetail: { eventId: string };
   EditEvent: { eventId: string };
+  Notifications: undefined;
+  EditProfile: undefined;
+  Privacy: undefined;
+  Help: undefined;
 };
 
 export type AppTabScreenProps<RouteName extends keyof AppTabParamList> = CompositeScreenProps<
