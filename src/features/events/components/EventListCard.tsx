@@ -74,10 +74,11 @@ export function EventListCard({
   const joinedCount = event.capacity - event.remainingSlots;
 
   return (
+    <View style={[styles.shadowWrap, variant === 'featured' ? styles.featuredCard : null]}>
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
       onPress={onPress}
-      style={[styles.card, variant === 'featured' ? styles.featuredCard : styles.compactCard]}
+      style={[styles.card, variant === 'featured' ? null : styles.compactCard]}
     >
       {variant === 'featured' ? (
         <>
@@ -137,15 +138,23 @@ export function EventListCard({
         </View>
       )}
     </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  shadowWrap: {
+    borderRadius: radius.xl,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.09,
+    shadowRadius: 12,
+    elevation: 5,
+  },
   card: {
     backgroundColor: colors.bgCard,
     borderRadius: radius.xl,
     overflow: 'hidden',
-    ...shadows.card,
   },
   featuredCard: {
     width: 292,

@@ -228,7 +228,6 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                       {topCategories.map((category, index) => (
                         <CategoryPill
                           key={category.id}
-                          icon={category.iconName}
                           label={category.name}
                           onPress={() => navigation.navigate('Explore')}
                           selected={index === 0}
@@ -310,7 +309,7 @@ const styles = StyleSheet.create({
   },
   body: {
     backgroundColor: colors.background,
-    gap: spacing.lg,
+    gap: spacing.xl,
     paddingBottom: spacing.xxl,
     paddingHorizontal: layout.screenPaddingH,
     paddingTop: spacing.xl,
@@ -322,8 +321,10 @@ const styles = StyleSheet.create({
   featuredRow: {
     flexDirection: 'row',
     gap: spacing.md,
+    paddingBottom: spacing.xl,
     paddingLeft: layout.screenPaddingH,
     paddingRight: layout.screenPaddingH,
+    paddingTop: spacing.xs,
   },
   categoryRow: {
     flexDirection: 'row',
