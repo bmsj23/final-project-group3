@@ -144,11 +144,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.bgCard,
     borderRadius: radius.xl,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.22,
-    shadowRadius: 14,
-    elevation: 10,
+    overflow: 'hidden',
+    ...shadows.card,
   },
   featuredCard: {
     width: 292,
@@ -158,8 +155,6 @@ const styles = StyleSheet.create({
   },
   featuredImage: {
     backgroundColor: '#DBEAFE',
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
     height: 170,
     width: '100%',
   },
