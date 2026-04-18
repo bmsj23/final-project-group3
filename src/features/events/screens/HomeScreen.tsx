@@ -228,7 +228,6 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                       {topCategories.map((category, index) => (
                         <CategoryPill
                           key={category.id}
-                          icon={category.iconName}
                           label={category.name}
                           onPress={() => navigation.navigate('Explore')}
                           selected={index === 0}
