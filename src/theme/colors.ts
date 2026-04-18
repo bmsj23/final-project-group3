@@ -5,9 +5,9 @@
 
 export const colors = {
   // --- Primary ---
-  primary: '#2563EB',
-  primaryDark: '#1D4ED8',
-  primaryDeep: '#1E3A8A',
+  primary: '#1E3A8A',
+  primaryDark: '#162D6E',
+  primaryDeep: '#0F1F4D',
 
   // --- Secondary accents ---
   yellow: '#F59E0B',
@@ -48,9 +48,9 @@ export const colors = {
 
   // --- Gradients (start / end for LinearGradient) ---
   gradient: {
-    blueLinear: { start: '#1D4ED8', end: '#2563EB' },
+    blueLinear: { start: '#162D6E', end: '#1E3A8A' },
     blackLinear: { start: '#0F172A', end: '#1E293B' },
-    buttonLinear: { start: '#1D4ED8', end: '#2563EB' },
+    buttonLinear: { start: '#162D6E', end: '#1E3A8A' },
     dividerLinear: { start: '#20222C', end: 'rgba(32, 34, 44, 0)' },
   },
 };
