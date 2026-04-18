@@ -321,9 +321,10 @@ const styles = StyleSheet.create({
   featuredRow: {
     flexDirection: 'row',
     gap: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.xl,
     paddingLeft: layout.screenPaddingH,
     paddingRight: layout.screenPaddingH,
+    paddingTop: spacing.xs,
   },
   categoryRow: {
     flexDirection: 'row',
