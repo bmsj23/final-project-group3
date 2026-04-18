@@ -143,11 +143,13 @@ export function EventListCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.bgCard,
-    borderColor: colors.border,
     borderRadius: radius.xl,
-    borderWidth: 1,
     overflow: 'hidden',
-    ...shadows.strong,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 5,
   },
   featuredCard: {
     width: 292,
