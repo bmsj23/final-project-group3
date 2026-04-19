@@ -212,41 +212,6 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
           </Text>
 
           {/* Synced step tracker */}
-          <View style={styles.stepTracker}>
-            {STEP_META.map((s, i) => {
-              const active    = i === currentStep;
-              const completed = i < currentStep;
-              return (
-                <View
-                  key={s.label}
-                  style={[styles.stepCard, active && styles.stepCardActive, completed && styles.stepCardDone]}
-                >
-                  <View style={[styles.stepBadge, active && styles.stepBadgeActive, completed && styles.stepBadgeDone]}>
-                    {completed
-                      ? <Ionicons name="checkmark" size={13} color="#fff" />
-                      : <Text style={[styles.stepNum, active && { color: '#fff' }]}>{i + 1}</Text>
-                    }
-                  </View>
-                  <View style={styles.stepInfo}>
-                    <Text style={[styles.stepLabel, active && styles.stepLabelActive, completed && styles.stepLabelDone]}>
-                      {s.label}
-                    </Text>
-                    <Text style={styles.stepSub}>{s.sub}</Text>
-                  </View>
-                  {active && (
-                    <View style={styles.activeArrow}>
-                      <Ionicons name="chevron-forward" size={14} color="#60A5FA" />
-                    </View>
-                  )}
-                  {completed && (
-                    <View style={styles.doneCheck}>
-                      <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </View>
         </Animated.View>
 
         {/* ── White form sheet ── */}
