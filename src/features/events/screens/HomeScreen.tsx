@@ -186,7 +186,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                   <SectionHeader
                     actionLabel="VIEW ALL"
                     onPressAction={() => navigation.navigate('Explore')}
-                    title="Popular Events"
+                    title="Featured Events"
                   />
 
                   <ScrollView
@@ -213,7 +213,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                   <SectionHeader
                     actionLabel="VIEW ALL"
                     onPressAction={() => navigation.navigate('Explore')}
-                    title="Choose By Category"
+                    title="Browse Categories"
                   />
 
                   <ScrollView
