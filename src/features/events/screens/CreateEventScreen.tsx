@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   KeyboardAvoidingView,
   Platform,
@@ -21,6 +22,7 @@ import { colors } from '../../../theme/colors';
 import { radius } from '../../../theme/radius';
 import { spacing } from '../../../theme/spacing';
 import { layout } from '../../../theme/layout';
+import { notifyEventCreated } from '../../notifications/service';
 import { createEvent, deleteEventImage, fetchCategories, uploadEventImage } from '../api';
 import { EventForm, type EventFormSubmission } from '../components/EventForm';
 import { createEmptyEventFormValues } from '../form';
@@ -44,6 +46,7 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
   const [screenError, setScreenError]         = useState<string | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [currentStep, setCurrentStep]         = useState(0);
+  const [isDirty, setIsDirty]                 = useState(false);
   const scrollRef = useRef<ScrollView | null>(null);
   const handleDescriptionFocus = useCallback(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
@@ -70,6 +73,29 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
 
   useEffect(() => { void loadCategories(); }, [loadCategories]);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!isDirty) return;
+
+      e.preventDefault();
+
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes. Are you sure you want to leave without publishing this event?',
+        [
+          { text: 'Keep Editing', onPress: () => {}, style: 'cancel' },
+          {
+            text: 'Discard',
+            onPress: () => navigation.dispatch(e.data.action),
+            style: 'destructive',
+          },
+        ],
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, isDirty]);
+
   const handleSubmit = useCallback(
     async ({ selectedImage, values }: EventFormSubmission) => {
       if (!profile) { setSubmissionError('Account setup required.'); return; }
@@ -89,6 +115,7 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
           if (uploadedImagePath) await deleteEventImage(uploadedImagePath);
           throw error ?? new Error('Unable to create event.');
         }
+        await notifyEventCreated(values.title.trim());
         navigation.reset({
           index: 1,
           routes: [
@@ -225,6 +252,7 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
             onStepChange={setCurrentStep}
             onSubmit={handleSubmit}
             onDescriptionFocus={handleDescriptionFocus}
+            onDirtyChange={setIsDirty}
             resetKey="create-event"
             submitLabel={isSubmitting ? 'Creating Event…' : 'Publish Event ✦'}
           />

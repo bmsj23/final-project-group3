@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   KeyboardAvoidingView,
   Platform,
@@ -50,6 +51,7 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
   const [screenError, setScreenError]         = useState<string | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [currentStep, setCurrentStep]         = useState(0);
+  const [isDirty, setIsDirty]                 = useState(false);
   const scrollRef = useRef<ScrollView | null>(null);
   const handleDescriptionFocus = useCallback(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
@@ -85,6 +87,29 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
   }, [route.params.eventId]);
 
   useEffect(() => { void loadEditorData(); }, [loadEditorData]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!isDirty) return;
+
+      e.preventDefault();
+
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes. Are you sure you want to leave without saving?',
+        [
+          { text: 'Keep Editing', onPress: () => {}, style: 'cancel' },
+          {
+            text: 'Discard',
+            onPress: () => navigation.dispatch(e.data.action),
+            style: 'destructive',
+          },
+        ],
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, isDirty]);
 
   const handleSubmit = useCallback(
     async ({ coverImageChanged, originalCoverImageUrl, selectedImage, values }: EventFormSubmission) => {
@@ -296,6 +321,7 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
             onStepChange={setCurrentStep}
             onSubmit={handleSubmit}
             onDescriptionFocus={handleDescriptionFocus}
+            onDirtyChange={setIsDirty}
             resetKey={`${event.id}:${event.updatedAt}`}
             submitLabel={isSubmitting ? 'Saving Changes…' : 'Save Changes ✦'}
           />

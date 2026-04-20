@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { colors } from '../../../theme/colors';
@@ -9,15 +10,24 @@ type CategoryPillProps = {
   label: string;
   selected: boolean;
   onPress: () => void;
+  icon?: string;
 };
 
-export function CategoryPill({ label, onPress, selected }: CategoryPillProps) {
+export function CategoryPill({ icon, label, onPress, selected }: CategoryPillProps) {
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       style={[styles.base, selected ? styles.selected : styles.unselected]}
     >
+      {icon ? (
+        <Ionicons
+          color={selected ? colors.white : colors.text}
+          name={icon as keyof typeof Ionicons.glyphMap}
+          size={14}
+          style={styles.icon}
+        />
+      ) : null}
       <Text style={[styles.label, selected ? styles.selectedLabel : styles.unselectedLabel]}>
         {label}
       </Text>
@@ -36,6 +46,9 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
+  },
+  icon: {
+    marginRight: spacing.xs,
   },
   selected: {
     backgroundColor: colors.primary,
