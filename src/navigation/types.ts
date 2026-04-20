@@ -6,6 +6,7 @@ export type AuthStackParamList = {
   Welcome: undefined;
   SignIn: undefined;
   SignUp: undefined;
+  TermsPolicy: { section?: 'terms' | 'privacy' };
 };
 
 export type AppTabParamList = {
@@ -23,6 +24,7 @@ export type AppStackParamList = {
   Notifications: undefined;
   EditProfile: undefined;
   Privacy: undefined;
+  TermsPolicy: { section?: 'terms' | 'privacy' };
   Help: undefined;
 };
 

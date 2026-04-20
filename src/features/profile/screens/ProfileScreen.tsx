@@ -463,7 +463,6 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                 <Ionicons name="chevron-forward" size={16} color="#EF4444" />
               </Pressable>
 
-              <Text style={styles.versionText}>Eventure v1.0.0 · Made with love in PH</Text>
             </>
           )}
         </Animated.View>

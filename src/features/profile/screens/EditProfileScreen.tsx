@@ -3,10 +3,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -37,6 +39,7 @@ function isValidEmail(email: string) {
 
 export function EditProfileScreen({ navigation }: EditProfileScreenProps) {
   const { profile, refreshProfile } = useAppSession();
+  const scrollRef = useRef<ScrollView | null>(null);
   const [fullName, setFullName] = useState(profile?.full_name ?? '');
   const [email, setEmail] = useState(profile?.email ?? '');
   const [bio, setBio] = useState(profile?.bio ?? '');
@@ -95,6 +98,12 @@ export function EditProfileScreen({ navigation }: EditProfileScreenProps) {
   function handleRemoveAvatar() {
     setSelectedImage(null);
     setShouldRemoveAvatar(true);
+  }
+
+  function handleBioFocus() {
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 120);
   }
 
   async function handleSave() {
@@ -206,199 +215,214 @@ export function EditProfileScreen({ navigation }: EditProfileScreenProps) {
       <View style={styles.orbTop} pointerEvents="none" />
       <View style={styles.orbBottom} pointerEvents="none" />
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Pressable
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="chevron-back" size={22} color="#F8FAFC" />
-          </Pressable>
-          <View style={styles.headerCopy}>
-            <Text style={styles.eyebrow}>Profile Studio</Text>
-            <Text style={styles.headerTitle}>Edit Profile</Text>
-            <Text style={styles.headerSubtitle}>
-              Update your identity, contact info, and profile photo in one place.
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.heroCard}>
-          <Pressable
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.avatarShell, pressed && styles.pressed]}
-            onPress={() => void handlePickImage()}
-          >
-            {avatarPreview ? (
-              <Image contentFit="cover" source={{ uri: avatarPreview }} style={styles.avatarImage} />
-            ) : (
-              <LinearGradient colors={['#2563EB', '#7C3AED']} style={styles.avatarFallback}>
-                <Text style={styles.avatarText}>{avatarInitial}</Text>
-              </LinearGradient>
-            )}
-            <View style={styles.cameraBadge}>
-              {isPickingImage ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Ionicons name="camera" size={14} color="#FFFFFF" />
-              )}
-            </View>
-          </Pressable>
-
-          <Text style={styles.heroNamePreview}>{fullName.trim() || 'Your display name'}</Text>
-          <Text style={styles.heroEmail}>{email.trim() || 'No email available'}</Text>
-
-          <View style={styles.heroActions}>
+      <KeyboardAvoidingView
+        style={styles.keyboardArea}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        >
+          <View style={styles.header}>
             <Pressable
               accessibilityRole="button"
-              style={({ pressed }) => [styles.secondaryChip, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="chevron-back" size={22} color="#F8FAFC" />
+            </Pressable>
+            <View style={styles.headerCopy}>
+              <Text style={styles.eyebrow}>Profile Studio</Text>
+              <Text style={styles.headerTitle}>Edit Profile</Text>
+              <Text style={styles.headerSubtitle}>
+                Update your identity, contact info, and profile photo in one place.
+              </Text>
+            </View>
+          </View>
+        
+
+          <View style={styles.heroCard}>
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.avatarShell, pressed && styles.pressed]}
               onPress={() => void handlePickImage()}
             >
-              <Ionicons name="image-outline" size={16} color="#DBEAFE" />
-              <Text style={styles.secondaryChipText}>Upload Photo</Text>
+              {avatarPreview ? (
+                <Image contentFit="cover" source={{ uri: avatarPreview }} style={styles.avatarImage} />
+              ) : (
+                <LinearGradient colors={['#2563EB', '#7C3AED']} style={styles.avatarFallback}>
+                  <Text style={styles.avatarText}>{avatarInitial}</Text>
+                </LinearGradient>
+              )}
+              <View style={styles.cameraBadge}>
+                {isPickingImage ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Ionicons name="camera" size={14} color="#FFFFFF" />
+                )}
+              </View>
             </Pressable>
-            {selectedImage ? (
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.ghostChip, pressed && styles.pressed]}
-                onPress={handleUndoNewPhoto}
-              >
-                <Ionicons name="refresh-outline" size={16} color="#FCA5A5" />
-                <Text style={styles.ghostChipText}>Undo New Photo</Text>
-              </Pressable>
-            ) : hasExistingAvatar && !shouldRemoveAvatar ? (
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.ghostChip, pressed && styles.pressed]}
-                onPress={handleRemoveAvatar}
-              >
-                <Ionicons name="trash-outline" size={16} color="#FCA5A5" />
-                <Text style={styles.ghostChipText}>Remove Photo</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
 
-        <View style={styles.formCard}>
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Display Name</Text>
-            <View style={styles.inputShell}>
-              <Ionicons name="person-outline" size={18} color="#93C5FD" />
-              <TextInput
-                placeholder="Enter your name"
-                placeholderTextColor="#64748B"
-                style={styles.input}
-                value={fullName}
-                onChangeText={setFullName}
-                maxLength={60}
-              />
+            <Text style={styles.heroNamePreview}>{fullName.trim() || 'Your display name'}</Text>
+            <Text style={styles.heroEmail}>{email.trim() || 'No email available'}</Text>
+
+            <View style={styles.heroActions}>
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.secondaryChip, pressed && styles.pressed]}
+                onPress={() => void handlePickImage()}
+              >
+                <Ionicons name="image-outline" size={16} color="#DBEAFE" />
+                <Text style={styles.secondaryChipText}>Upload Photo</Text>
+              </Pressable>
+              {selectedImage ? (
+                <Pressable
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.ghostChip, pressed && styles.pressed]}
+                  onPress={handleUndoNewPhoto}
+                >
+                  <Ionicons name="refresh-outline" size={16} color="#FCA5A5" />
+                  <Text style={styles.ghostChipText}>Undo New Photo</Text>
+                </Pressable>
+              ) : hasExistingAvatar && !shouldRemoveAvatar ? (
+                <Pressable
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.ghostChip, pressed && styles.pressed]}
+                  onPress={handleRemoveAvatar}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#FCA5A5" />
+                  <Text style={styles.ghostChipText}>Remove Photo</Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
 
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Email Address</Text>
-            <View style={styles.inputShell}>
-              <Ionicons name="mail-outline" size={18} color="#93C5FD" />
-              <TextInput
-                autoCapitalize="none"
-                keyboardType="email-address"
-                placeholder="Enter your email"
-                placeholderTextColor="#64748B"
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-              />
+          <View style={styles.formCard}>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Display Name</Text>
+              <View style={styles.inputShell}>
+                <Ionicons name="person-outline" size={18} color="#93C5FD" />
+                <TextInput
+                  placeholder="Enter your name"
+                  placeholderTextColor="#64748B"
+                  style={styles.input}
+                  value={fullName}
+                  onChangeText={setFullName}
+                  maxLength={60}
+                />
+              </View>
             </View>
-            <Text style={styles.helperText}>
-              Changing your email updates the account contact email used by the app.
-            </Text>
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Bio</Text>
-            <View style={[styles.inputShell, styles.inputShellMulti]}>
-              <TextInput
-                multiline
-                numberOfLines={5}
-                placeholder="Tell people a bit about yourself, your events, or what you enjoy organizing."
-                placeholderTextColor="#64748B"
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Email Address</Text>
+              <View style={styles.inputShell}>
+                <Ionicons name="mail-outline" size={18} color="#93C5FD" />
+                <TextInput
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  placeholder="Enter your email"
+                  placeholderTextColor="#64748B"
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                />
+              </View>
+              <Text style={styles.helperText}>
+                Changing your email updates the account contact email used by the app.
+              </Text>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Bio</Text>
+              <View style={[styles.inputShell, styles.inputShellMulti]}>
+                <TextInput
+                  multiline
+                  numberOfLines={5}
+                  placeholder="Tell people a bit about yourself, your events, or what you enjoy organizing."
+                  placeholderTextColor="#64748B"
                 style={styles.inputMulti}
                 textAlignVertical="top"
                 value={bio}
                 onChangeText={setBio}
+                onFocus={handleBioFocus}
                 maxLength={180}
               />
+              </View>
+              <Text style={styles.helperText}>{bio.trim().length}/180 characters</Text>
             </View>
-            <Text style={styles.helperText}>{bio.trim().length}/180 characters</Text>
-          </View>
 
-          <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Role</Text>
-              <Text style={styles.infoValue}>{profile?.role ?? 'Organizer'}</Text>
+            <View style={styles.infoCard}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Role</Text>
+                <Text style={styles.infoValue}>{profile?.role ?? 'Organizer'}</Text>
+              </View>
+              <View style={[styles.infoRow, styles.infoRowBorder]}>
+                <Text style={styles.infoLabel}>Member Since</Text>
+                <Text style={styles.infoValue}>
+                  {profile?.created_at
+                    ? new Date(profile.created_at).toLocaleDateString('en-PH', {
+                        month: 'long',
+                        year: 'numeric',
+                      })
+                    : 'Recently'}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Status</Text>
+                <Text style={styles.infoValue}>
+                  {shouldRemoveAvatar
+                    ? 'Photo will be removed on save'
+                    : selectedImage
+                      ? 'New photo ready to upload'
+                      : 'No pending media changes'}
+                </Text>
+              </View>
             </View>
-            <View style={[styles.infoRow, styles.infoRowBorder]}>
-              <Text style={styles.infoLabel}>Member Since</Text>
-              <Text style={styles.infoValue}>
-                {profile?.created_at
-                  ? new Date(profile.created_at).toLocaleDateString('en-PH', {
-                      month: 'long',
-                      year: 'numeric',
-                    })
-                  : 'Recently'}
-              </Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Status</Text>
-              <Text style={styles.infoValue}>
-                {shouldRemoveAvatar
-                  ? 'Photo will be removed on save'
-                  : selectedImage
-                    ? 'New photo ready to upload'
-                    : 'No pending media changes'}
-              </Text>
-            </View>
-          </View>
 
-          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-          <Pressable
-            accessibilityRole="button"
-            disabled={isSaving}
-            style={({ pressed }) => [
-              styles.saveButtonWrap,
-              pressed && !isSaving ? styles.pressed : null,
-              isSaving ? styles.disabled : null,
-            ]}
-            onPress={() => void handleSave()}
-          >
-            <LinearGradient
-              colors={['#2563EB', '#1D4ED8', '#1E40AF']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.saveButton}
+            <Pressable
+              accessibilityRole="button"
+              disabled={isSaving}
+              style={({ pressed }) => [
+                styles.saveButtonWrap,
+                pressed && !isSaving ? styles.pressed : null,
+                isSaving ? styles.disabled : null,
+              ]}
+              onPress={() => void handleSave()}
             >
-              {isSaving ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <>
-                  <Ionicons name="save-outline" size={18} color="#FFFFFF" />
-                  <Text style={styles.saveButtonText}>
-                    {hasChanges ? 'Save Changes' : 'No Changes Yet'}
-                  </Text>
-                </>
-              )}
-            </LinearGradient>
-          </Pressable>
-        </View>
-      </ScrollView>
+              <LinearGradient
+                colors={['#2563EB', '#1D4ED8', '#1E40AF']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.saveButton}
+              >
+                {isSaving ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="save-outline" size={18} color="#FFFFFF" />
+                    <Text style={styles.saveButtonText}>
+                      {hasChanges ? 'Save Changes' : 'No Changes Yet'}
+                    </Text>
+                  </>
+                )}
+              </LinearGradient>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#020817' },
+  keyboardArea: { flex: 1 },
   scroll: {
     flexGrow: 1,
     paddingTop: 56,

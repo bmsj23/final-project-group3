@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { CreateEventScreen } from '../features/events/screens/CreateEventScreen';
+import { TermsPolicyScreen } from '../features/auth/screens/TermsPolicyScreen';
 import { EditEventScreen } from '../features/events/screens/EditEventScreen';
 import { EventDetailScreen } from '../features/events/screens/EventDetailScreen';
 import { EditProfileScreen } from '../features/profile/screens/EditProfileScreen';
@@ -30,6 +31,7 @@ export function AppNavigator() {
       <Stack.Screen component={NotificationsScreen} name="Notifications" />
       <Stack.Screen component={EditProfileScreen} name="EditProfile" />
       <Stack.Screen component={PrivacyScreen} name="Privacy" />
+      <Stack.Screen component={TermsPolicyScreen} name="TermsPolicy" />
       <Stack.Screen component={HelpScreen} name="Help" />
     </Stack.Navigator>
   );
