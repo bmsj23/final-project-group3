@@ -119,27 +119,29 @@ export function EventListCard({
         </>
       ) : (
         <View style={styles.compactRow}>
-          <Image
-            contentFit="cover"
-            source={event.coverImageUrl ? { uri: event.coverImageUrl } : undefined}
-            style={styles.compactImage}
-            transition={150}
-          />
           <View style={styles.compactBody}>
+            {categoryName ? (
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryBadgeText}>{categoryName.toUpperCase()}</Text>
+              </View>
+            ) : null}
             <Text numberOfLines={1} style={styles.compactTitle}>
               {event.title}
             </Text>
-            <Text numberOfLines={1} style={styles.meta}>
-              {formatEventDateTime(event.startsAt)}
-            </Text>
-            <Text numberOfLines={1} style={styles.meta}>
-              {event.location}
-            </Text>
-            {categoryName ? <Text style={styles.category}>{categoryName}</Text> : null}
+            <View style={styles.metaRow}>
+              <Ionicons color={colors.textMuted} name="calendar-outline" size={12} />
+              <Text numberOfLines={1} style={styles.meta}>{formatEventDateTime(event.startsAt)}</Text>
+            </View>
+            <View style={styles.metaRow}>
+              <Ionicons color={colors.textMuted} name="location-outline" size={12} />
+              <Text numberOfLines={1} style={styles.meta}>{event.location}</Text>
+            </View>
           </View>
           <View style={styles.trailingColumn}>
             <Text style={styles.spotsText}>{event.remainingSlots} spots</Text>
-            <Text style={styles.joinText}>JOIN NOW</Text>
+            <View style={styles.joinButton}>
+              <Text style={styles.joinButtonText}>JOIN</Text>
+            </View>
           </View>
         </View>
       )}
@@ -166,7 +168,7 @@ const styles = StyleSheet.create({
     width: 292,
   },
   compactCard: {
-    padding: spacing.sm,
+    padding: spacing.md,
   },
   featuredImage: {
     backgroundColor: '#DBEAFE',
@@ -223,37 +225,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
-  compactImage: {
-    backgroundColor: '#DBEAFE',
-    borderRadius: radius.md,
-    height: 72,
-    width: 72,
-  },
   compactBody: {
     flex: 1,
-    gap: 2,
+    gap: spacing.xxs,
+  },
+  categoryBadge: {
+    alignSelf: 'flex-start',
+    borderColor: colors.primary,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    marginBottom: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  categoryBadgeText: {
+    ...typography.caption4,
+    color: colors.primary,
+    letterSpacing: 0.5,
   },
   compactTitle: {
     ...typography.button1,
     color: colors.text,
-    fontSize: 17,
-  },
-  category: {
-    ...typography.caption3,
-    color: colors.primary,
-    marginTop: 2,
+    fontSize: 16,
   },
   trailingColumn: {
     alignItems: 'flex-end',
-    gap: spacing.xs,
-    width: 72,
+    gap: spacing.sm,
   },
   spotsText: {
     ...typography.caption3,
     color: colors.primary,
-  },
-  joinText: {
-    ...typography.caption3,
-    color: colors.text,
   },
 });
