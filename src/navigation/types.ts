@@ -6,6 +6,7 @@ export type AuthStackParamList = {
   Welcome: undefined;
   SignIn: undefined;
   SignUp: undefined;
+  TermsPolicy: { section?: 'terms' | 'privacy' };
 };
 
 export type AppTabParamList = {
@@ -21,6 +22,10 @@ export type AppStackParamList = {
   EventDetail: { eventId: string };
   EditEvent: { eventId: string };
   Notifications: undefined;
+  EditProfile: undefined;
+  Privacy: undefined;
+  TermsPolicy: { section?: 'terms' | 'privacy' };
+  Help: undefined;
 };
 
 export type AppTabScreenProps<RouteName extends keyof AppTabParamList> = CompositeScreenProps<

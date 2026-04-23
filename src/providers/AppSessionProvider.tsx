@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import {
   fetchMyProfile,
@@ -30,6 +30,7 @@ type AppSessionContextValue = {
   signIn: (values: SignInFormValues) => Promise<void>;
   signUp: (values: SignUpFormValues) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 };
 
 type AppSessionProviderProps = {
@@ -52,6 +53,26 @@ export function AppSessionProvider({ children }: AppSessionProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const refreshProfile = useCallback(async () => {
+    if (!session?.user || !supabase) {
+      return;
+    }
+
+    const { data, error } = await fetchMyProfile(session.user.id);
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data) {
+      throw new Error('Your account is missing some setup details. Please sign out and sign back in.');
+    }
+
+    setProfile(data);
+    setMode('authenticated');
+    setErrorMessage(null);
+  }, [session]);
 
   useEffect(() => {
     let isMounted = true;
@@ -207,8 +228,9 @@ export function AppSessionProvider({ children }: AppSessionProviderProps) {
           throw error;
         }
       },
+      refreshProfile,
     }),
-    [errorMessage, mode, profile, session],
+    [errorMessage, mode, profile, refreshProfile, session],
   );
 
   return <AppSessionContext.Provider value={value}>{children}</AppSessionContext.Provider>;
