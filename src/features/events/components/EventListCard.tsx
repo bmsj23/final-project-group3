@@ -126,11 +126,7 @@ export function EventListCard({
             transition={150}
           />
           <View style={styles.compactBody}>
-            {categoryName ? (
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryBadgeText}>{categoryName.toUpperCase()}</Text>
-              </View>
-            ) : null}
+            {categoryName ? <Text style={styles.categoryText}>{categoryName.toUpperCase()}</Text> : null}
             <Text numberOfLines={1} style={styles.compactTitle}>
               {event.title}
             </Text>
@@ -241,19 +237,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xxs,
   },
-  categoryBadge: {
-    alignSelf: 'flex-start',
-    borderColor: colors.primary,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    marginBottom: spacing.xxs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  categoryBadgeText: {
+  categoryText: {
     ...typography.caption4,
     color: colors.primary,
     letterSpacing: 0.5,
+    marginBottom: 2,
   },
   compactTitle: {
     ...typography.button1,
