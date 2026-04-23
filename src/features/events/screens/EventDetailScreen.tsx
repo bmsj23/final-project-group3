@@ -380,7 +380,7 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#060D1F' },
-  scroll: { flexGrow: 1, paddingBottom: 100 },
+  scroll: { flexGrow: 1 },
 
   // Loading / error states
   centerState: {
@@ -591,18 +591,10 @@ const styles = StyleSheet.create({
   deleteBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: '#DC2626' },
 
   stickyFooter: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: '#fff',
     paddingHorizontal: layout.screenPaddingH,
     paddingTop: 12,
     paddingBottom: 28,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 10,
   },
   bookBtn: {
     borderRadius: 16,
