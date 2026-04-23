@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text } from 'react-native';
 
 import { colors } from '../../../theme/colors';
 import { radius } from '../../../theme/radius';
@@ -13,25 +13,31 @@ type CategoryPillProps = {
   icon?: string;
 };
 
-export function CategoryPill({ icon, label, onPress, selected }: CategoryPillProps) {
+export function CategoryPill({ label, onPress, selected }: CategoryPillProps) {
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  const onPressIn = () => {
+    Animated.timing(opacity, { toValue: 0.6, duration: 80, useNativeDriver: true }).start();
+  };
+
+  const onPressOut = () => {
+    Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+  };
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={[styles.base, selected ? styles.selected : styles.unselected]}
-    >
-      {icon ? (
-        <Ionicons
-          color={selected ? colors.white : colors.text}
-          name={icon as keyof typeof Ionicons.glyphMap}
-          size={14}
-          style={styles.icon}
-        />
-      ) : null}
-      <Text style={[styles.label, selected ? styles.selectedLabel : styles.unselectedLabel]}>
-        {label}
-      </Text>
-    </Pressable>
+    <Animated.View style={{ opacity }}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        style={[styles.base, selected ? styles.selected : styles.unselected]}
+      >
+        <Text style={[styles.label, selected ? styles.selectedLabel : styles.unselectedLabel]}>
+          {label}
+        </Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 
