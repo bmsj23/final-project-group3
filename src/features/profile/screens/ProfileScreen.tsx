@@ -147,7 +147,6 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
       navigation.navigate('Help');
       return;
     }
-  }
 
     if (action === 'soon') {
       Alert.alert('Coming Soon', 'This feature is being built. Stay tuned!');
@@ -279,15 +278,6 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
               <Text style={styles.suspendedText}>Suspended</Text>
             </View>
           )}
-
-            {/* Suspended warning */}
-            {profile?.is_suspended && (
-              <View style={styles.suspendedBadge}>
-                <Ionicons name="warning-outline" size={11} color="#EF4444" />
-                <Text style={styles.suspendedText}>Suspended</Text>
-              </View>
-            )}
-          </View>
 
           {/* â”€â”€ Stats row â”€â”€ */}
           <Animated.View
@@ -574,6 +564,19 @@ const styles = StyleSheet.create({
     color: '#BFDBFE',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
+  },
+  settingsBtn: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15,23,42,0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarSection: { alignItems: 'center', marginBottom: 18 },
   avatarPressable: { borderRadius: 59 },

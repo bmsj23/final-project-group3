@@ -28,7 +28,7 @@ export function AppNavigator() {
       <Stack.Screen component={CreateEventScreen} name="CreateEvent" />
       <Stack.Screen component={EventDetailScreen} name="EventDetail" />
       <Stack.Screen component={EditEventScreen} name="EditEvent" />
-      <Stack.Screen component={NotificationsScreen} name="Notifications" />
+      <Stack.Screen component={NotificationScreen} name="Notifications" />
       <Stack.Screen component={EditProfileScreen} name="EditProfile" />
       <Stack.Screen component={PrivacyScreen} name="Privacy" />
       <Stack.Screen component={TermsPolicyScreen} name="TermsPolicy" />
