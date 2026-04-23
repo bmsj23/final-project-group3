@@ -40,6 +40,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [query, setQuery] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Prevent re-fetching every time the tab is focused.
   const hasFetched = useRef(false);
@@ -84,7 +85,11 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   );
   const filteredEvents = useMemo(() => filterEventsByQuery(events, query, categoryNameById), [categoryNameById, events, query]);
   const featuredEvents = events.slice(0, 4);
-  const listEvents = events.slice(0, 8);
+  const listEvents = useMemo(() => {
+    const base = events.slice(0, 8);
+    if (!selectedCategoryId) return base;
+    return base.filter((e) => e.categoryId === selectedCategoryId);
+  }, [events, selectedCategoryId]);
   const topCategories = categories.slice(0, 5);
   const isSearching = query.trim().length > 0;
 
@@ -186,7 +191,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                   <SectionHeader
                     actionLabel="VIEW ALL"
                     onPressAction={() => navigation.navigate('Explore')}
-                    title="Popular Events"
+                    title="Featured Events"
                   />
 
                   <ScrollView
@@ -213,7 +218,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                   <SectionHeader
                     actionLabel="VIEW ALL"
                     onPressAction={() => navigation.navigate('Explore')}
-                    title="Choose By Category"
+                    title="Browse Categories"
                   />
 
                   <ScrollView
@@ -225,13 +230,18 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                     style={styles.fullBleedScroll}
                   >
                     <View style={styles.categoryRow}>
-                      {topCategories.map((category, index) => (
+                      <CategoryPill
+                        key="all"
+                        label="All"
+                        onPress={() => setSelectedCategoryId(null)}
+                        selected={selectedCategoryId === null}
+                      />
+                      {topCategories.map((category) => (
                         <CategoryPill
                           key={category.id}
-                          icon={category.iconName}
                           label={category.name}
-                          onPress={() => navigation.navigate('Explore')}
-                          selected={index === 0}
+                          onPress={() => setSelectedCategoryId(prev => prev === category.id ? null : category.id)}
+                          selected={selectedCategoryId === category.id}
                         />
                       ))}
                     </View>
@@ -310,7 +320,7 @@ const styles = StyleSheet.create({
   },
   body: {
     backgroundColor: colors.background,
-    gap: spacing.lg,
+    gap: spacing.xl,
     paddingBottom: spacing.xxl,
     paddingHorizontal: layout.screenPaddingH,
     paddingTop: spacing.xl,
@@ -322,8 +332,10 @@ const styles = StyleSheet.create({
   featuredRow: {
     flexDirection: 'row',
     gap: spacing.md,
+    paddingBottom: spacing.xl,
     paddingLeft: layout.screenPaddingH,
     paddingRight: layout.screenPaddingH,
+    paddingTop: spacing.xs,
   },
   categoryRow: {
     flexDirection: 'row',

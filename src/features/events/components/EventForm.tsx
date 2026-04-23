@@ -1,11 +1,16 @@
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePickerNative, {
+  type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
+import DateTimePicker from 'react-native-ui-datepicker';
+import dayjs from 'dayjs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -53,13 +58,14 @@ type EventFormProps = {
   onSubmit: (submission: EventFormSubmission) => Promise<void>;
   onStepChange?: (step: number) => void;
   onDescriptionFocus?: () => void;
+  onDirtyChange?: (isDirty: boolean) => void;
 };
 
 // ─── Step definitions ─────────────────────────────────────────────────────────
 const STEPS = [
-  { label: 'Details',  icon: 'document-text-outline'  as const },
-  { label: 'Schedule', icon: 'calendar-outline'        as const },
-  { label: 'Review',   icon: 'cloud-upload-outline'    as const },
+  { label: 'Details', icon: 'document-text-outline' as const },
+  { label: 'Schedule', icon: 'calendar-outline' as const },
+  { label: 'Review', icon: 'cloud-upload-outline' as const },
 ];
 
 // ─── Small helper: styled label ──────────────────────────────────────────────
@@ -72,8 +78,8 @@ function FieldLabel({ text, required }: { text: string; required?: boolean }) {
   );
 }
 const fl = StyleSheet.create({
-  row:      { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  label:    { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#334155' },
+  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  label: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#334155' },
   required: { fontFamily: 'Inter_700Bold', fontSize: 13, color: colors.primary },
 });
 
@@ -120,13 +126,13 @@ function Field({
           {...inputProps}
         />
       </View>
-      {error   ? <Text style={fieldStyles.error}>{error}</Text>   : null}
+      {error ? <Text style={fieldStyles.error}>{error}</Text> : null}
       {!error && hint ? <Text style={fieldStyles.hint}>{hint}</Text> : null}
     </View>
   );
 }
 const fieldStyles = StyleSheet.create({
-  wrap:          { gap: 0 },
+  wrap: { gap: 0 },
   shell: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#F8FAFC',
@@ -134,8 +140,8 @@ const fieldStyles = StyleSheet.create({
     borderRadius: radius.md, minHeight: 54,
     overflow: 'hidden',
   },
-  shellError:    { borderColor: colors.error, backgroundColor: '#FFF5F5' },
-  shellMulti:    { alignItems: 'flex-start', minHeight: 110 },
+  shellError: { borderColor: colors.error, backgroundColor: '#FFF5F5' },
+  shellMulti: { alignItems: 'flex-start', minHeight: 110 },
   iconWrap: {
     width: 48, alignItems: 'center', justifyContent: 'center' as any,
     borderRightWidth: 1, borderRightColor: '#E2E8F0',
@@ -148,9 +154,9 @@ const fieldStyles = StyleSheet.create({
     paddingHorizontal: spacing.md, minHeight: 52,
   },
   inputWithIcon: { paddingLeft: spacing.sm },
-  inputMulti:    { paddingTop: spacing.md, minHeight: 108 },
-  error:  { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.error, marginTop: 5 },
-  hint:   { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8', marginTop: 5 },
+  inputMulti: { paddingTop: spacing.md, minHeight: 108 },
+  error: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.error, marginTop: 5 },
+  hint: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8', marginTop: 5 },
 });
 
 // ─── Review row ───────────────────────────────────────────────────────────────
@@ -173,15 +179,15 @@ function ReviewRow({ icon, label, value, color }: {
   );
 }
 const rrStyles = StyleSheet.create({
-  row:     { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  iconWrap:{
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  iconWrap: {
     width: 34, height: 34, borderRadius: 10,
     backgroundColor: '#EFF6FF',
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  text:    { flex: 1, gap: 2 },
-  label:   { fontFamily: 'Inter_500Medium', fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.4 },
-  value:   { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#0F172A', lineHeight: 20 },
+  text: { flex: 1, gap: 2 },
+  label: { fontFamily: 'Inter_500Medium', fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.4 },
+  value: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#0F172A', lineHeight: 20 },
 });
 
 // ─── Step nav buttons ─────────────────────────────────────────────────────────
@@ -228,21 +234,21 @@ function NavRow({
   );
 }
 const navStyles = StyleSheet.create({
-  row:            { flexDirection: 'row', gap: spacing.sm, marginTop: 4 },
+  row: { flexDirection: 'row', gap: spacing.sm, marginTop: 4 },
   backBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0',
     borderRadius: radius.md, minHeight: 52, paddingHorizontal: spacing.lg, flex: 1,
     justifyContent: 'center',
   },
-  backBtnDisabled:{ borderColor: '#F1F5F9' },
-  backText:       { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#64748B' },
-  nextBtn:        { flex: 2, borderRadius: radius.md, overflow: 'hidden' },
+  backBtnDisabled: { borderColor: '#F1F5F9' },
+  backText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#64748B' },
+  nextBtn: { flex: 2, borderRadius: radius.md, overflow: 'hidden' },
   nextGrad: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     minHeight: 52, gap: 6, paddingHorizontal: spacing.lg,
   },
-  nextText:       { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#fff' },
+  nextText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#fff' },
 });
 
 // ─── Step 0 validation ────────────────────────────────────────────────────────
@@ -251,9 +257,9 @@ function validateStep0(
   capacityInput: string,
 ): EventFormErrors {
   const errs: EventFormErrors = {};
-  if (!values.title.trim())       errs.title       = 'Event name is required.';
-  if (!values.category)           errs.category    = 'Please select a category.';
-  if (!values.location.trim())    errs.location    = 'Location is required.';
+  if (!values.title.trim()) errs.title = 'Event name is required.';
+  if (!values.category) errs.category = 'Please select a category.';
+  if (!values.location.trim()) errs.location = 'Location is required.';
   if (!values.description.trim()) errs.description = 'Description is required.';
   const cap = Number.parseInt(capacityInput.trim(), 10);
   if (!capacityInput.trim() || !Number.isFinite(cap) || cap <= 0)
@@ -267,13 +273,128 @@ function validateStep1(
   deadlineInput: string,
 ): EventFormErrors {
   const errs: EventFormErrors = {};
-  const dt  = parseDateTimeInput(dateTimeInput);
+  const dt = parseDateTimeInput(dateTimeInput);
   const ddl = parseDateTimeInput(deadlineInput);
-  if (!dt  || !isFutureIsoDate(dt))   errs.dateTime = 'Event date must be a valid future date.';
-  if (!ddl || !isFutureIsoDate(ddl))  errs.registrationDeadline = 'Deadline must be a valid future date.';
+  if (!dt || !isFutureIsoDate(dt)) errs.dateTime = 'Event date must be a valid future date.';
+  if (!ddl || !isFutureIsoDate(ddl)) errs.registrationDeadline = 'Deadline must be a valid future date.';
   else if (dt && !isRegistrationDeadlineBeforeEvent(ddl, dt))
-    errs.registrationDeadline = 'Deadline must be before the event date.';
+    errs.registrationDeadline = 'Deadline cannot be after the event date and time.';
   return errs;
+}
+
+type PickerTarget = 'eventDate' | 'eventTime' | 'deadlineDate' | 'deadlineTime';
+
+function getDateFromInput(value: string) {
+  const isoValue = parseDateTimeInput(value);
+
+  if (!isoValue) {
+    return null;
+  }
+
+  const date = new Date(isoValue);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function createDefaultPickerDate() {
+  const now = new Date();
+  now.setMinutes(0, 0, 0);
+  now.setHours(now.getHours() + 1);
+  return now;
+}
+
+function getTodayAtMidnight() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+}
+
+function setDatePart(currentValue: string, nextDate: Date) {
+  const base = getDateFromInput(currentValue) ?? createDefaultPickerDate();
+  base.setFullYear(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate());
+  return formatDateTimeInput(base.toISOString());
+}
+
+function setTimePart(currentValue: string, nextTime: Date) {
+  const base = getDateFromInput(currentValue) ?? createDefaultPickerDate();
+  base.setHours(nextTime.getHours(), nextTime.getMinutes(), 0, 0);
+  return formatDateTimeInput(base.toISOString());
+}
+
+function formatPickerDate(value: string) {
+  const date = getDateFromInput(value);
+
+  if (!date) {
+    return 'Select date';
+  }
+
+  return date.toLocaleDateString('en-PH', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatPickerTime(value: string) {
+  const date = getDateFromInput(value);
+
+  if (!date) {
+    return 'Select time';
+  }
+
+  return date.toLocaleTimeString('en-PH', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function getPickerTitle(target: PickerTarget | null) {
+  if (target === 'eventDate') return 'Select event date';
+  if (target === 'eventTime') return 'Select event time';
+  if (target === 'deadlineDate') return 'Select registration date';
+  if (target === 'deadlineTime') return 'Select registration time';
+  return '';
+}
+
+function PickerField({
+  label,
+  required,
+  value,
+  icon,
+  error,
+  onPress,
+}: {
+  label: string;
+  required?: boolean;
+  value: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  error?: string;
+  onPress: () => void;
+}) {
+  const hasError = Boolean(error);
+
+  return (
+    <View style={styles.fieldWrap}>
+      <FieldLabel text={label} required={required} />
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.pickerField,
+          hasError && styles.pickerFieldError,
+          pressed && { opacity: 0.88 },
+        ]}
+      >
+        <View style={[styles.pickerFieldIconWrap, hasError && styles.pickerFieldIconWrapError]}>
+          <Ionicons color={hasError ? colors.error : colors.primary} name={icon} size={16} />
+        </View>
+        <Text style={[styles.pickerFieldValue, !value.startsWith('Select') && styles.pickerFieldValueFilled]}>
+          {value}
+        </Text>
+        <Ionicons color="#94A3B8" name="chevron-down" size={16} />
+      </Pressable>
+      {error ? <Text style={styles.fieldError}>{error}</Text> : null}
+    </View>
+  );
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -287,16 +408,18 @@ export function EventForm({
   onSubmit,
   onStepChange,
   onDescriptionFocus,
+  onDirtyChange,
 }: EventFormProps) {
-  const [values, setValues]         = useState<EventFormValues>(initialValues);
+  const [values, setValues] = useState<EventFormValues>(initialValues);
   const [capacityInput, setCapacityInput] = useState(initialValues.capacity > 0 ? String(initialValues.capacity) : '');
   const [dateTimeInput, setDateTimeInput] = useState(formatDateTimeInput(initialValues.dateTime));
   const [deadlineInput, setDeadlineInput] = useState(formatDateTimeInput(initialValues.registrationDeadline));
-  const [tagsInput, setTagsInput]   = useState(tagsToInput(initialValues.tags));
-  const [errors, setErrors]         = useState<EventFormErrors>({});
+  const [tagsInput, setTagsInput] = useState(tagsToInput(initialValues.tags));
+  const [errors, setErrors] = useState<EventFormErrors>({});
   const [selectedImage, setSelectedImage] = useState<EventImageAsset | null>(null);
   const [removeExisting, setRemoveExisting] = useState(false);
-  const [step, setStep]             = useState(0);
+  const [step, setStep] = useState(0);
+  const [activePicker, setActivePicker] = useState<PickerTarget | null>(null);
 
   // Slide animation between steps
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -319,8 +442,42 @@ export function EventForm({
     setSelectedImage(null);
     setRemoveExisting(false);
     setStep(0);
+    setActivePicker(null);
     onStepChange?.(0);
   }, [resetKey]);
+
+  useEffect(() => {
+    const initialCapacityInput = initialValues.capacity > 0 ? String(initialValues.capacity) : '';
+    const initialDateTimeInput = formatDateTimeInput(initialValues.dateTime);
+    const initialDeadlineInput = formatDateTimeInput(initialValues.registrationDeadline);
+    const initialTagsInput = tagsToInput(initialValues.tags);
+
+    const isDirty =
+      values.title !== initialValues.title ||
+      values.description !== initialValues.description ||
+      values.location !== initialValues.location ||
+      values.category !== initialValues.category ||
+      capacityInput !== initialCapacityInput ||
+      dateTimeInput !== initialDateTimeInput ||
+      deadlineInput !== initialDeadlineInput ||
+      tagsInput !== initialTagsInput ||
+      Boolean(selectedImage) ||
+      removeExisting ||
+      step > 0;
+
+    onDirtyChange?.(isDirty);
+  }, [
+    capacityInput,
+    dateTimeInput,
+    deadlineInput,
+    initialValues,
+    onDirtyChange,
+    removeExisting,
+    selectedImage,
+    step,
+    tagsInput,
+    values,
+  ]);
 
   const previewUri = selectedImage?.uri ?? (removeExisting ? null : initialValues.coverImageUrl ?? null);
 
@@ -341,6 +498,44 @@ export function EventForm({
   function handleRemoveImage() {
     if (selectedImage) { setSelectedImage(null); return; }
     if (initialValues.coverImageUrl) setRemoveExisting(v => !v);
+  }
+
+  function getPickerValue(target: PickerTarget) {
+    switch (target) {
+      case 'eventDate':
+      case 'eventTime':
+        return getDateFromInput(dateTimeInput) ?? createDefaultPickerDate();
+      case 'deadlineDate':
+      case 'deadlineTime':
+        return getDateFromInput(deadlineInput) ?? getDateFromInput(dateTimeInput) ?? createDefaultPickerDate();
+    }
+  }
+
+  function handlePickerChange(target: PickerTarget, event: DateTimePickerEvent, selectedDate?: Date) {
+    if (event.type !== 'set' || !selectedDate) {
+      return;
+    }
+
+    if (target === 'eventDate') {
+      setDateTimeInput(setDatePart(dateTimeInput, selectedDate));
+      setErrors((prev) => ({ ...prev, dateTime: undefined }));
+      return;
+    }
+
+    if (target === 'eventTime') {
+      setDateTimeInput(setTimePart(dateTimeInput, selectedDate));
+      setErrors((prev) => ({ ...prev, dateTime: undefined }));
+      return;
+    }
+
+    if (target === 'deadlineDate') {
+      setDeadlineInput(setDatePart(deadlineInput, selectedDate));
+      setErrors((prev) => ({ ...prev, registrationDeadline: undefined }));
+      return;
+    }
+
+    setDeadlineInput(setTimePart(deadlineInput, selectedDate));
+    setErrors((prev) => ({ ...prev, registrationDeadline: undefined }));
   }
 
   // ── Step nav with validation ────────────────────────────────────────────
@@ -373,8 +568,8 @@ export function EventForm({
     if (Object.keys(allErrors).length > 0) {
       setErrors(allErrors);
       // Jump back to the first step that has errors
-      const step0Fields: (keyof EventFormValues)[] = ['title','category','location','capacity','description'];
-      const step1Fields: (keyof EventFormValues)[] = ['dateTime','registrationDeadline'];
+      const step0Fields: (keyof EventFormValues)[] = ['title', 'category', 'location', 'capacity', 'description'];
+      const step1Fields: (keyof EventFormValues)[] = ['dateTime', 'registrationDeadline'];
       if (step0Fields.some(f => allErrors[f])) { animateStep(0); return; }
       if (step1Fields.some(f => allErrors[f])) { animateStep(1); return; }
       return;
@@ -389,14 +584,91 @@ export function EventForm({
 
   return (
     <View style={styles.root}>
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setActivePicker(null)}
+        transparent
+        visible={Boolean(activePicker)}
+      >
+        <Pressable style={styles.pickerModalBackdrop} onPress={() => setActivePicker(null)}>
+          <Pressable onPress={() => { }} style={styles.pickerModalCard}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerHeaderText}>{getPickerTitle(activePicker)}</Text>
+              <Pressable onPress={() => setActivePicker(null)} style={styles.pickerDoneBtn}>
+                <Text style={styles.pickerDoneText}>Done</Text>
+              </Pressable>
+            </View>
+
+            {activePicker ? (
+              <View style={styles.pickerContainer}>
+                {activePicker.endsWith('Date') ? (
+                  <DateTimePicker
+                    mode="single"
+                    date={getPickerValue(activePicker)}
+                    minDate={getTodayAtMidnight()}
+                    // ── Disable dates after the event date for the deadline picker ──
+                    disabledDates={
+                      activePicker === 'deadlineDate'
+                        ? (date) => {
+                          const eventDate = getDateFromInput(dateTimeInput);
+                          if (!eventDate || !date) return false;
+                          const d = dayjs(date).toDate();
+                          // Strip time — only compare calendar days
+                          d.setHours(0, 0, 0, 0);
+                          const event = new Date(eventDate);
+                          event.setHours(0, 0, 0, 0);
+                          return d > event;
+                        }
+                        : undefined
+                    }
+                    onChange={({ date }) => {
+                      if (!date) return;
+                      const selected = dayjs(date).toDate();
+                      if (activePicker === 'eventDate') {
+                        setDateTimeInput(setDatePart(dateTimeInput, selected));
+                        setErrors(prev => ({ ...prev, dateTime: undefined }));
+                      } else {
+                        setDeadlineInput(setDatePart(deadlineInput, selected));
+                        setErrors(prev => ({ ...prev, registrationDeadline: undefined }));
+                      }
+                    }}
+                    styles={{
+                      day_label: { fontFamily: 'Inter_400Regular', color: '#0F172A' },
+                      selected: { backgroundColor: '#2563EB', borderRadius: 20 },
+                      selected_label: { fontFamily: 'Inter_700Bold', color: '#FFFFFF' },
+                      month_selector_label: { fontFamily: 'Inter_600SemiBold', color: '#0F172A', fontSize: 15 },
+                      year_selector_label: { fontFamily: 'Inter_600SemiBold', color: '#0F172A', fontSize: 15 },
+                      weekday_label: { fontFamily: 'Inter_500Medium', color: '#64748B', fontSize: 12 },
+                      today: { borderWidth: 1.5, borderColor: '#2563EB', borderRadius: 20 },
+                      today_label: { fontFamily: 'Inter_700Bold', color: '#2563EB' },
+                      disabled: { opacity: 0.3 },
+                      disabled_label: { color: '#CBD5E1' },
+                    }}
+                  />
+                ) : (
+                  <DateTimePickerNative
+                    display="spinner"
+                    mode="time"
+                    value={getPickerValue(activePicker)}
+                    onChange={(event, selectedDate) =>
+                      handlePickerChange(activePicker, event, selectedDate)
+                    }
+                    textColor="#0F172A"
+                  />
+                )}
+              </View>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
       {/* ── Step progress bar ── */}
       <View style={styles.progress}>
         {STEPS.map((s, i) => (
           <View key={s.label} style={styles.progressItem}>
             <View style={[
               styles.progressDot,
-              i === step   && styles.progressDotActive,
-              i <  step    && styles.progressDotDone,
+              i === step && styles.progressDotActive,
+              i < step && styles.progressDotDone,
             ]}>
               {i < step
                 ? <Ionicons name="checkmark" size={13} color="#fff" />
@@ -414,7 +686,7 @@ export function EventForm({
       </View>
 
       {/* ── Animated step content ── */}
-      <Animated.View style={{ opacity: slideAnim.interpolate({ inputRange: [-30,0,30], outputRange: [0,1,0] }), transform: [{ translateX: slideAnim }] }}>
+      <Animated.View style={{ opacity: slideAnim.interpolate({ inputRange: [-30, 0, 30], outputRange: [0, 1, 0] }), transform: [{ translateX: slideAnim }] }}>
 
         {/* ══ STEP 0: DETAILS ══ */}
         {step === 0 && (
@@ -540,7 +812,7 @@ export function EventForm({
             </View>
 
             <NavRow
-              onBack={() => {}}
+              onBack={() => { }}
               onNext={goToStep1}
               nextLabel="Next: Schedule"
               backDisabled
@@ -553,60 +825,72 @@ export function EventForm({
           <View style={styles.stepContent}>
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Event Schedule</Text>
-              <Text style={styles.sectionSub}>Use YYYY-MM-DD HH:MM format in your local time</Text>
+              <Text style={styles.sectionSub}>Choose the date and time for your event and registration deadline</Text>
 
-              {/* Date hint box */}
               <View style={styles.hintBox}>
                 <Ionicons name="information-circle-outline" size={16} color="#60A5FA" />
                 <Text style={styles.hintBoxText}>
-                  Example: <Text style={styles.hintBoxCode}>2026-06-15 18:00</Text> for June 15, 6:00 PM
+                  Registration must be on or before the event date and time.
                 </Text>
               </View>
 
-              <Field
-                label="Event Date & Time"
-                required
-                error={errors.dateTime}
-                icon="calendar-outline"
-                hint="YYYY-MM-DD HH:MM"
-                value={dateTimeInput}
-                onChangeText={v => { setDateTimeInput(v); setErrors(p => ({ ...p, dateTime: undefined })); }}
-                placeholder="2026-06-15 18:00"
-                keyboardType="numbers-and-punctuation"
-                returnKeyType="next"
-              />
+              <View style={styles.scheduleGrid}>
+                <PickerField
+                  error={errors.dateTime}
+                  icon="calendar-outline"
+                  label="Event Date"
+                  required
+                  value={formatPickerDate(dateTimeInput)}
+                  onPress={() => setActivePicker('eventDate')}
+                />
+                <PickerField
+                  error={errors.dateTime}
+                  icon="time-outline"
+                  label="Event Time"
+                  required
+                  value={formatPickerTime(dateTimeInput)}
+                  onPress={() => setActivePicker('eventTime')}
+                />
+              </View>
 
-              <Field
-                label="Registration Deadline"
-                required
-                error={errors.registrationDeadline}
-                icon="time-outline"
-                hint="Must be before the event date"
-                value={deadlineInput}
-                onChangeText={v => { setDeadlineInput(v); setErrors(p => ({ ...p, registrationDeadline: undefined })); }}
-                placeholder="2026-06-10 23:59"
-                keyboardType="numbers-and-punctuation"
-              />
+              <View style={styles.scheduleGrid}>
+                <PickerField
+                  error={errors.registrationDeadline}
+                  icon="calendar-outline"
+                  label="Registration Date"
+                  required
+                  value={formatPickerDate(deadlineInput)}
+                  onPress={() => setActivePicker('deadlineDate')}
+                />
+                <PickerField
+                  error={errors.registrationDeadline}
+                  icon="time-outline"
+                  label="Registration Time"
+                  required
+                  value={formatPickerTime(deadlineInput)}
+                  onPress={() => setActivePicker('deadlineTime')}
+                />
+              </View>
 
               {/* Visual date preview if both are valid */}
               {parseDateTimeInput(dateTimeInput) && parseDateTimeInput(deadlineInput) &&
-               isFutureIsoDate(parseDateTimeInput(dateTimeInput)) &&
-               isFutureIsoDate(parseDateTimeInput(deadlineInput)) && (
-                <View style={styles.datePreview}>
-                  <View style={styles.datePreviewRow}>
-                    <Ionicons name="checkmark-circle" size={15} color="#10B981" />
-                    <Text style={styles.datePreviewText}>
-                      Event: {new Date(parseDateTimeInput(dateTimeInput)).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
-                    </Text>
+                isFutureIsoDate(parseDateTimeInput(dateTimeInput)) &&
+                isFutureIsoDate(parseDateTimeInput(deadlineInput)) && (
+                  <View style={styles.datePreview}>
+                    <View style={styles.datePreviewRow}>
+                      <Ionicons name="checkmark-circle" size={15} color="#10B981" />
+                      <Text style={styles.datePreviewText}>
+                        Event: {new Date(parseDateTimeInput(dateTimeInput)).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
+                      </Text>
+                    </View>
+                    <View style={styles.datePreviewRow}>
+                      <Ionicons name="checkmark-circle" size={15} color="#10B981" />
+                      <Text style={styles.datePreviewText}>
+                        Deadline: {new Date(parseDateTimeInput(deadlineInput)).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.datePreviewRow}>
-                    <Ionicons name="checkmark-circle" size={15} color="#10B981" />
-                    <Text style={styles.datePreviewText}>
-                      Deadline: {new Date(parseDateTimeInput(deadlineInput)).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
-                    </Text>
-                  </View>
-                </View>
-              )}
+                )}
             </View>
 
             <NavRow
@@ -645,12 +929,12 @@ export function EventForm({
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Review Details</Text>
               <View style={styles.reviewGrid}>
-                <ReviewRow icon="sparkles-outline" label="Event Name"    value={values.title}                                    color="#60A5FA" />
-                <ReviewRow icon="pricetag-outline" label="Category"      value={categories.find(c => c.id === values.category)?.name ?? '—'} color="#FBBF24" />
-                <ReviewRow icon="location-outline" label="Location"      value={values.location}                                  color="#34D399" />
-                <ReviewRow icon="people-outline"   label="Capacity"      value={capacityInput ? `${capacityInput} attendees` : '—'} color="#A78BFA" />
+                <ReviewRow icon="sparkles-outline" label="Event Name" value={values.title} color="#60A5FA" />
+                <ReviewRow icon="pricetag-outline" label="Category" value={categories.find(c => c.id === values.category)?.name ?? '—'} color="#FBBF24" />
+                <ReviewRow icon="location-outline" label="Location" value={values.location} color="#34D399" />
+                <ReviewRow icon="people-outline" label="Capacity" value={capacityInput ? `${capacityInput} attendees` : '—'} color="#A78BFA" />
                 {tagsInput.trim() && (
-                  <ReviewRow icon="pricetag-outline" label="Tags"        value={tagsInput}                                        color="#FB923C" />
+                  <ReviewRow icon="pricetag-outline" label="Tags" value={tagsInput} color="#FB923C" />
                 )}
               </View>
             </View>
@@ -658,8 +942,8 @@ export function EventForm({
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Schedule</Text>
               <View style={styles.reviewGrid}>
-                <ReviewRow icon="calendar-outline" label="Event Date"          value={dateTimeInput  || '—'} color="#60A5FA" />
-                <ReviewRow icon="time-outline"     label="Registration Closes" value={deadlineInput   || '—'} color="#EF4444" />
+                <ReviewRow icon="calendar-outline" label="Event Date" value={dateTimeInput || '—'} color="#60A5FA" />
+                <ReviewRow icon="time-outline" label="Registration Closes" value={deadlineInput || '—'} color="#EF4444" />
               </View>
             </View>
 
@@ -718,8 +1002,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   progressDotActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  progressDotDone:   { backgroundColor: '#10B981',      borderColor: '#10B981'      },
-  progressNum:  { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#94A3B8' },
+  progressDotDone: { backgroundColor: '#10B981', borderColor: '#10B981' },
+  progressNum: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#94A3B8' },
   progressLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: '#94A3B8', textAlign: 'center' },
   progressLabelActive: { fontFamily: 'Inter_600SemiBold', color: colors.primary },
   progressLine: {
@@ -742,7 +1026,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
   },
   sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#0F172A' },
-  sectionSub:   { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8', marginTop: -8 },
+  sectionSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8', marginTop: -8 },
 
   // Cover image
   coverZone: {
@@ -751,7 +1035,7 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: '#E2E8F0', borderStyle: 'dashed',
     minHeight: 160,
   },
-  coverImg:   { width: '100%', height: 180 },
+  coverImg: { width: '100%', height: 180 },
   coverOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.35)',
@@ -767,7 +1051,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center',
   },
   coverPlaceholderTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.primary },
-  coverPlaceholderSub:   { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8' },
+  coverPlaceholderSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8' },
   removeImgBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     alignSelf: 'center',
@@ -786,7 +1070,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   catChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  catChipText:         { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#64748B' },
+  catChipText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#64748B' },
   catChipTextSelected: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#fff' },
 
   fieldError: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.error, marginTop: 4 },
@@ -800,6 +1084,89 @@ const styles = StyleSheet.create({
   },
   hintBoxText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#1D4ED8', flex: 1, lineHeight: 19 },
   hintBoxCode: { fontFamily: 'Inter_700Bold' },
+  scheduleGrid: { gap: spacing.md },
+  pickerField: {
+    minHeight: 54,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: spacing.md,
+    overflow: 'hidden',
+  },
+  pickerFieldError: {
+    borderColor: colors.error,
+    backgroundColor: '#FFF5F5',
+  },
+  pickerFieldIconWrap: {
+    width: 48,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRightWidth: 1,
+    borderRightColor: '#E2E8F0',
+  },
+  pickerFieldIconWrapError: {
+    borderRightColor: '#FECACA',
+    backgroundColor: '#FFF0F0',
+  },
+  pickerFieldValue: {
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+    color: '#94A3B8',
+    paddingHorizontal: spacing.md,
+  },
+  pickerFieldValueFilled: {
+    color: '#0F172A',
+  },
+  pickerModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  pickerModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 20,
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.xs,
+  },
+  pickerHeaderText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    color: '#334155',
+  },
+  pickerDoneBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  pickerDoneText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    color: colors.primary,
+  },
+  pickerContainer: {
+    backgroundColor: '#FFFFFF',
+  },
   datePreview: {
     backgroundColor: '#ECFDF5', borderRadius: radius.md,
     borderWidth: 1, borderColor: '#A7F3D0',
@@ -810,7 +1177,7 @@ const styles = StyleSheet.create({
 
   // Review step
   reviewCoverWrap: { borderRadius: radius.xl, overflow: 'hidden', height: 160 },
-  reviewCover:     { width: '100%', height: '100%' },
+  reviewCover: { width: '100%', height: '100%' },
   reviewCoverLabel: {
     position: 'absolute', bottom: 10, left: 12,
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -823,8 +1190,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   reviewNoCoverText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#94A3B8', flex: 1, lineHeight: 19 },
-  reviewGrid:  { gap: 14 },
-  reviewDesc:  { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#475569', lineHeight: 22 },
+  reviewGrid: { gap: 14 },
+  reviewDesc: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#475569', lineHeight: 22 },
 
   // Error card
   errorCard: {
@@ -839,5 +1206,5 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   errorCardTitle: { fontFamily: 'Inter_700Bold', fontSize: 14, color: colors.error },
-  errorCardBody:  { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#B91C1C', lineHeight: 19, marginTop: 2 },
+  errorCardBody: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#B91C1C', lineHeight: 19, marginTop: 2 },
 });

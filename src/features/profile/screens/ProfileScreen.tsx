@@ -25,6 +25,7 @@ import { fetchMyCreatedEvents } from '../../events/api';
 
 type ProfileScreenProps = AppTabScreenProps<'Profile'>;
 
+// â”€â”€â”€ Menu items for authenticated users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const MENU_ITEMS = [
   {
     id: 'notifications',
@@ -55,12 +56,14 @@ const MENU_ITEMS = [
   },
 ];
 
+// â”€â”€â”€ Helper: format join date â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function formatMemberSince(isoDate: string | undefined) {
   if (!isoDate) return 'Recently';
   const date = new Date(isoDate);
   return date.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
 }
 
+// â”€â”€â”€ Helper: get role label + color â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function getRoleMeta(role: string | undefined, isGuest: boolean) {
   if (isGuest) return { label: 'Guest', color: '#94A3B8', bg: 'rgba(148,163,184,0.12)' };
   if (role === 'admin') return { label: 'Admin', color: '#F472B6', bg: 'rgba(244,114,182,0.12)' };
@@ -73,7 +76,8 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [isPhotoPreviewVisible, setIsPhotoPreviewVisible] = useState(false);
   const roleMeta = getRoleMeta(profile?.role, isGuest);
 
-  const heroAnim = useRef(new Animated.Value(0)).current;
+  // â”€â”€â”€ Entrance animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const heroAnim   = useRef(new Animated.Value(0)).current;
   const avatarAnim = useRef(new Animated.Value(0)).current;
   const statsAnim = useRef(new Animated.Value(0)).current;
   const bodyAnim = useRef(new Animated.Value(0)).current;
@@ -87,6 +91,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
     ]).start();
   }, []);
 
+  // â”€â”€â”€ Load event count when screen comes into focus â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useFocusEffect(
     useCallback(() => {
       if (isGuest || !profile) {
@@ -101,6 +106,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
     }, [profile, isGuest]),
   );
 
+  // â”€â”€â”€ Sign out confirmation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function handleSignOut() {
     Alert.alert(
       'Sign Out',
@@ -116,6 +122,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
     );
   }
 
+  // â”€â”€â”€ Menu action handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function handleMenuPress(action: string) {
     if (action === 'navigate') {
       navigation.navigate('MyEvents');
@@ -126,7 +133,6 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
       navigation.navigate('CreateEvent');
       return;
     }
-
     if (action === 'notifications') {
       navigation.navigate('Notifications');
       return;
@@ -143,12 +149,19 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
     }
   }
 
+    if (action === 'soon') {
+      Alert.alert('Coming Soon', 'This feature is being built. Stay tuned!');
+    }
+  }
+
+  // â”€â”€â”€ Avatar initial â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const initial = profile?.full_name?.slice(0, 1)?.toUpperCase() ?? (isGuest ? 'G' : '?');
 
   return (
     <SafeAreaView style={styles.root} edges={[]}>
       <StatusBar style="light" />
 
+      {/* â”€â”€ Full dark background gradient â”€â”€ */}
       <LinearGradient
         colors={['#020617', '#0B1B3B', '#112B5C']}
         start={{ x: 0, y: 0 }}
@@ -156,12 +169,19 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
         style={StyleSheet.absoluteFill}
       />
 
+      {/* â”€â”€ Neon glow orbs (same universe as auth screens) â”€â”€ */}
+      <View style={styles.orbPink}   pointerEvents="none" />
+      <View style={styles.orbCyan}   pointerEvents="none" />
+      <View style={styles.orbPurple} pointerEvents="none" />
+
       <ScrollView
         bounces={false}
         overScrollMode="never"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
+
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• HERO SECTION â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         <Animated.View
           style={[
             styles.hero,
@@ -179,8 +199,17 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
             <Text style={styles.heroEyebrow}>
               {isGuest ? 'Guest Mode' : profile?.role === 'admin' ? 'Admin' : ''}
             </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+              style={({ pressed }) => [styles.settingsBtn, pressed && { opacity: 0.6 }]}
+              onPress={() => Alert.alert('Settings', 'Settings panel coming soon!')}
+            >
+              <Ionicons name="settings-outline" size={20} color="#CBD5E1" />
+            </Pressable>
           </View>
 
+          {/* â”€â”€ Large avatar with gradient ring â”€â”€ */}
           <Animated.View
             style={[
               styles.avatarSection,
@@ -251,6 +280,16 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
           )}
 
+            {/* Suspended warning */}
+            {profile?.is_suspended && (
+              <View style={styles.suspendedBadge}>
+                <Ionicons name="warning-outline" size={11} color="#EF4444" />
+                <Text style={styles.suspendedText}>Suspended</Text>
+              </View>
+            )}
+          </View>
+
+          {/* â”€â”€ Stats row â”€â”€ */}
           <Animated.View
             style={[
               styles.statsRow,
@@ -283,6 +322,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
           </Animated.View>
         </Animated.View>
 
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• WHITE BODY SHEET â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         <Animated.View
           style={[
             styles.body,
@@ -298,6 +338,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
         >
           <View style={styles.handle} />
 
+          {/* â”€â”€ GUEST STATE â”€â”€ */}
           {isGuest ? (
             <View style={styles.guestSection}>
               <LinearGradient
@@ -347,34 +388,15 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
           ) : (
             <>
+              {/* â”€â”€ AUTHENTICATED: Quick actions â”€â”€ */}
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>Quick Actions</Text>
                 <View style={styles.quickActions}>
                   {[
-                    {
-                      icon: 'calendar' as const,
-                      label: 'My Events',
-                      color: '#60A5FA',
-                      onPress: () => navigation.navigate('MyEvents'),
-                    },
-                    {
-                      icon: 'add-circle' as const,
-                      label: 'Create',
-                      color: '#34D399',
-                      onPress: () => navigation.navigate('CreateEvent'),
-                    },
-                    {
-                      icon: 'compass' as const,
-                      label: 'Explore',
-                      color: '#FBBF24',
-                      onPress: () => navigation.navigate('Explore'),
-                    },
-                    {
-                      icon: 'notifications' as const,
-                      label: 'Alerts',
-                      color: '#A78BFA',
-                      onPress: () => navigation.navigate('Notifications'),
-                    },
+                    { icon: 'calendar' as const,   label: 'My Events',    color: '#60A5FA', onPress: () => navigation.navigate('MyEvents')    },
+                    { icon: 'add-circle' as const,  label: 'Create',       color: '#34D399', onPress: () => navigation.navigate('CreateEvent') },
+                    { icon: 'compass' as const,     label: 'Explore',      color: '#FBBF24', onPress: () => navigation.navigate('Explore')     },
+                    { icon: 'notifications' as const, label: 'Alerts',     color: '#A78BFA', onPress: () => navigation.navigate('Notifications') },
                   ].map((action) => (
                     <Pressable
                       key={action.label}
@@ -391,27 +413,17 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                 </View>
               </View>
 
+              {/* â”€â”€ Account info card â”€â”€ */}
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>Account Info</Text>
                 <View style={styles.infoCard}>
                   {[
-                    { icon: 'mail-outline' as const, label: 'Email', value: profile?.email ?? '-' },
-                    { icon: 'shield-outline' as const, label: 'Role', value: roleMeta.label },
-                    {
-                      icon: 'calendar-outline' as const,
-                      label: 'Joined',
-                      value: formatMemberSince(profile?.created_at),
-                    },
-                    {
-                      icon: 'person-outline' as const,
-                      label: 'Account ID',
-                      value: `${profile?.id?.slice(0, 8) ?? '-'}...`,
-                    },
-                  ].map((row, index, items) => (
-                    <View
-                      key={row.label}
-                      style={[styles.infoRow, index < items.length - 1 && styles.infoRowBorder]}
-                    >
+                    { icon: 'mail-outline' as const,    label: 'Email',       value: profile?.email ?? '-'                },
+                    { icon: 'shield-outline' as const,   label: 'Role',        value: roleMeta.label                       },
+                    { icon: 'calendar-outline' as const, label: 'Joined',      value: formatMemberSince(profile?.created_at) },
+                    { icon: 'person-outline' as const,   label: 'Account ID',  value: (profile?.id?.slice(0, 8) ?? '-') + '...' },
+                  ].map((row, i, arr) => (
+                    <View key={row.label} style={[styles.infoRow, i < arr.length - 1 && styles.infoRowBorder]}>
                       <View style={styles.infoIconWrap}>
                         <Ionicons name={row.icon} size={16} color={colors.primary} />
                       </View>
@@ -424,6 +436,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                 </View>
               </View>
 
+              {/* â”€â”€ Menu items â”€â”€ */}
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>More</Text>
                 <View style={styles.menuCard}>
@@ -451,6 +464,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                 </View>
               </View>
 
+              {/* â”€â”€ Sign out button â”€â”€ */}
               <Pressable
                 accessibilityRole="button"
                 style={({ pressed }) => [styles.signOutBtn, pressed && { opacity: 0.8 }]}
@@ -463,6 +477,8 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                 <Ionicons name="chevron-forward" size={16} color="#EF4444" />
               </Pressable>
 
+              {/* App version footer */}
+              <Text style={styles.versionText}>Eventure v1.0.0 | Made with love in PH</Text>
             </>
           )}
         </Animated.View>
@@ -518,9 +534,29 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
   );
 }
 
+// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#020617' },
   scroll: { flexGrow: 1 },
+
+  // â”€â”€ Orbs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  orbPink: {
+    position: 'absolute', top: -60, left: -60,
+    width: 260, height: 260, borderRadius: 130,
+    backgroundColor: '#FF3CAC', opacity: 0.10,
+  },
+  orbCyan: {
+    position: 'absolute', top: 100, right: -80,
+    width: 220, height: 220, borderRadius: 110,
+    backgroundColor: '#00F5FF', opacity: 0.07,
+  },
+  orbPurple: {
+    position: 'absolute', top: 200, left: '30%',
+    width: 160, height: 160, borderRadius: 80,
+    backgroundColor: '#7C3AED', opacity: 0.08,
+  },
+
+  // â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   hero: {
     alignItems: 'center',
     paddingTop: 46,
@@ -647,7 +683,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
-  statDivider: { width: 1, height: 46, backgroundColor: 'rgba(148,163,184,0.18)' },
+  statDivider: { width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.08)' },
+
+  // â”€â”€ White body sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   body: {
     backgroundColor: '#081225',
     borderTopLeftRadius: 40,
@@ -668,6 +706,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 24,
   },
+
+  // â”€â”€ Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   section: { paddingHorizontal: spacing.xl, marginBottom: 24 },
   sectionLabel: {
     fontFamily: 'Inter_700Bold',
@@ -677,6 +717,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 12,
   },
+
+  // â”€â”€ Quick actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   quickActions: { flexDirection: 'row', justifyContent: 'space-between' },
   quickAction: { alignItems: 'center', gap: 8, flex: 1 },
   quickActionIcon: {
@@ -693,6 +735,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#E2E8F0',
   },
+
+  // â”€â”€ Info card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   infoCard: {
     backgroundColor: '#0F172A',
     borderRadius: 24,
@@ -729,6 +773,8 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'right',
   },
+
+  // â”€â”€ Menu card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   menuCard: {
     backgroundColor: '#0F172A',
     borderRadius: 24,
@@ -763,6 +809,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#93C5FD',
   },
+
+  // â”€â”€ Sign out â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   signOutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -797,6 +845,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
   },
+
+  // â”€â”€ Guest section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   guestSection: { paddingHorizontal: spacing.xl, gap: spacing.md },
   guestCard: {
     borderRadius: radius.xl,

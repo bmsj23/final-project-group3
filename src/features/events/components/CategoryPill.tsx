@@ -1,51 +1,43 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text } from 'react-native';
 
 import { colors } from '../../../theme/colors';
 import { radius } from '../../../theme/radius';
 import { spacing } from '../../../theme/spacing';
 import { typography } from '../../../theme/typography';
 
-// Map DB icon names that don't match Ionicons glyph names exactly.
-const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
-  users: 'people-outline',
-  music: 'musical-notes-outline',
-  food: 'fast-food-outline',
-  tech: 'laptop-outline',
-  film: 'film-outline',
-  heart: 'heart-outline',
-  star: 'star-outline',
-};
-
 type CategoryPillProps = {
   label: string;
   selected: boolean;
-  icon?: string;
   onPress: () => void;
+  icon?: string;
 };
 
-export function CategoryPill({ label, onPress, selected, icon }: CategoryPillProps) {
-  const resolvedIcon = icon ? (ICON_MAP[icon] ?? (icon as keyof typeof Ionicons.glyphMap)) : undefined;
+export function CategoryPill({ label, onPress, selected }: CategoryPillProps) {
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  const onPressIn = () => {
+    Animated.timing(opacity, { toValue: 0.6, duration: 80, useNativeDriver: true }).start();
+  };
+
+  const onPressOut = () => {
+    Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+  };
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={[styles.base, selected ? styles.selected : styles.unselected]}
-    >
-      {resolvedIcon ? (
-        <View style={[styles.iconCircle, selected ? styles.iconCircleSelected : styles.iconCircleUnselected]}>
-          <Ionicons
-            color={selected ? colors.primary : colors.textMuted}
-            name={resolvedIcon}
-            size={14}
-          />
-        </View>
-      ) : null}
-      <Text style={[styles.label, selected ? styles.selectedLabel : styles.unselectedLabel]}>
-        {label}
-      </Text>
-    </Pressable>
+    <Animated.View style={{ opacity }}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        style={[styles.base, selected ? styles.selected : styles.unselected]}
+      >
+        <Text style={[styles.label, selected ? styles.selectedLabel : styles.unselectedLabel]}>
+          {label}
+        </Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -55,12 +47,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: radius.full,
     flexDirection: 'row',
-    gap: spacing.xs,
     justifyContent: 'center',
     marginRight: spacing.xs,
-    minHeight: 44,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  icon: {
+    marginRight: spacing.xs,
   },
   selected: {
     backgroundColor: colors.primary,
@@ -70,22 +64,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1,
   },
-  iconCircle: {
-    alignItems: 'center',
-    borderRadius: radius.full,
-    height: 28,
-    justifyContent: 'center',
-    width: 28,
-  },
-  iconCircleSelected: {
-    backgroundColor: colors.white,
-  },
-  iconCircleUnselected: {
-    backgroundColor: colors.grey,
-  },
   label: {
-    ...typography.body3,
-    lineHeight: 18,
+    ...typography.body2,
   },
   selectedLabel: {
     color: colors.white,
