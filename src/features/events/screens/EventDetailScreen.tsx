@@ -181,12 +181,6 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             </LinearGradient>
           )}
 
-          {/* Gradient scrim for readability */}
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.8)']}
-            style={styles.heroScrim}
-            pointerEvents="none"
-          />
 
           {/* Overlay controls */}
           <View style={styles.overlayTop}>
@@ -211,29 +205,6 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             </Pressable>
           </View>
 
-          {/* Hero bottom info */}
-          <View style={styles.heroBottom}>
-            <View style={[styles.heroBadge, { backgroundColor: statusStyle.bg }]}>
-              <View style={[styles.heroBadgeDot, { backgroundColor: statusStyle.text }]} />
-              <Text style={[styles.heroBadgeText, { color: statusStyle.text }]}>
-                {formatEventStatus(event.status)}
-              </Text>
-            </View>
-            {event.isFlagged && (
-              <View style={styles.flaggedBadge}>
-                <Ionicons name="flag" size={12} color="#EF4444" />
-                <Text style={styles.flaggedText}>Flagged</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Event title overlay */}
-          <View style={styles.heroTitleOverlay}>
-            <Text style={styles.heroTitle} numberOfLines={2}>{event.title}</Text>
-            <View style={styles.heroFreeBadge}>
-              <Text style={styles.heroFreeText}>FREE</Text>
-            </View>
-          </View>
         </View>
 
         {/* ── Bottom sheet ── */}
@@ -248,68 +219,70 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
         >
           <View style={styles.grabber} />
 
-          {/* Quick actions */}
-          <View style={styles.quickActions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={isSaved ? 'Remove favorite' : 'Save favorite'}
-              style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
-              onPress={() => setIsSaved(v => !v)}
-            >
-              <Ionicons
-                name={isSaved ? 'heart' : 'heart-outline'}
-                size={20}
-                color={isSaved ? '#FF3CAC' : '#6B7280'}
-              />
-              <Text style={styles.quickActionText}>{isSaved ? 'Saved' : 'Save'}</Text>
-            </Pressable>
+          {/* Title + badges */}
+          <View style={styles.sheetTitleBlock}>
+            <View style={styles.heroBadgeRow}>
+              <View style={[styles.heroBadge, { backgroundColor: statusStyle.bg }]}>
+                <View style={[styles.heroBadgeDot, { backgroundColor: statusStyle.text }]} />
+                <Text style={[styles.heroBadgeText, { color: statusStyle.text }]}>
+                  {formatEventStatus(event.status)}
+                </Text>
+              </View>
+              <View style={styles.heroFreeBadge}>
+                <Text style={styles.heroFreeText}>FREE</Text>
+              </View>
+              {event.isFlagged && (
+                <View style={styles.flaggedBadge}>
+                  <Ionicons name="flag" size={12} color="#EF4444" />
+                  <Text style={styles.flaggedText}>Flagged</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.sheetTitle} numberOfLines={3}>{event.title}</Text>
+          </View>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Share event"
-              style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
-              onPress={() => Alert.alert('Share', 'Sharing feature coming soon! 📤')}
-            >
-              <Ionicons name="share-outline" size={20} color="#6B7280" />
-              <Text style={styles.quickActionText}>Share</Text>
-            </Pressable>
+          {/* Category + actions row */}
+          <View style={styles.sheetHeader}>
+            {event.categoryName ? (
+              <View style={styles.categoryPill}>
+                <Ionicons name="pricetag-outline" size={13} color="#1E3A8A" />
+                <Text style={styles.categoryText}>{event.categoryName}</Text>
+              </View>
+            ) : <View />}
 
-            {isOwner && (
-              <>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Edit event"
-                  style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
-                  onPress={() => navigation.navigate('EditEvent', { eventId: event.id })}
-                >
-                  <Ionicons name="pencil" size={20} color="#6B7280" />
-                  <Text style={styles.quickActionText}>Edit</Text>
-                </Pressable>
-
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Delete event"
-                  style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
-                  onPress={confirmDelete}
-                >
-                  <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                  <Text style={[styles.quickActionText, { color: '#EF4444' }]}>Delete</Text>
-                </Pressable>
-              </>
-            )}
+            <View style={styles.sheetActions}>
+              <Pressable
+                style={({ pressed }) => [styles.actionIconBtn, pressed && { opacity: 0.6 }]}
+                onPress={() => setIsSaved(v => !v)}
+              >
+                <Ionicons name={isSaved ? 'heart' : 'heart-outline'} size={20} color={isSaved ? '#EF4444' : '#6B7280'} />
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.actionIconBtn, pressed && { opacity: 0.6 }]}
+                onPress={() => Alert.alert('Share', 'Sharing feature coming soon!')}
+              >
+                <Ionicons name="share-outline" size={20} color="#6B7280" />
+              </Pressable>
+              {isOwner && (
+                <>
+                  <Pressable
+                    style={({ pressed }) => [styles.actionIconBtn, pressed && { opacity: 0.6 }]}
+                    onPress={() => navigation.navigate('EditEvent', { eventId: event.id })}
+                  >
+                    <Ionicons name="pencil" size={20} color="#6B7280" />
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.actionIconBtn, pressed && { opacity: 0.6 }]}
+                    onPress={confirmDelete}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                  </Pressable>
+                </>
+              )}
+            </View>
           </View>
 
           <View style={styles.divider} />
-
-          {/* Category */}
-          {event.categoryName && (
-            <View style={styles.categorySection}>
-              <View style={styles.categoryPill}>
-                <Ionicons name="pricetag-outline" size={14} color="#6B7280" />
-                <Text style={styles.categoryText}>{event.categoryName}</Text>
-              </View>
-            </View>
-          )}
 
           {/* ── Detail rows ── */}
           <View style={styles.detailSection}>
@@ -386,41 +359,28 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             </View>
           )}
 
-          {/* ── Actions ── */}
-          <View style={styles.actionsSection}>
-            {!isOwner ? (
-              <Pressable
-                style={({ pressed }) => [styles.bookBtn, pressed && styles.bookBtnPressed]}
-                onPress={() => Alert.alert('Booking', 'Booking feature coming soon! 🎟️')}
-              >
-                <LinearGradient
-                  colors={['#162D6E', '#1E3A8A', '#2952A3']}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                  style={styles.bookBtnGrad}
-                >
-                  <Text style={styles.bookBtnText}>Register Now</Text>
-                  <View style={styles.bookBtnArrow}>
-                    <Ionicons name="arrow-forward" size={18} color="#1E3A8A" />
-                  </View>
-                </LinearGradient>
-              </Pressable>
-            ) : (
-              <View style={styles.ownerActionHint}>
-                <Text style={styles.ownerActionHintText}>
-                  Use the quick actions above to manage your event.
-                </Text>
-              </View>
-            )}
-          </View>
         </Animated.View>
       </ScrollView>
+
+      {/* ── Sticky footer ── */}
+      {!isOwner ? (
+        <View style={styles.stickyFooter}>
+          <Pressable
+            style={({ pressed }) => [styles.bookBtn, pressed && styles.bookBtnPressed]}
+            onPress={() => Alert.alert('Booking', 'Booking feature coming soon! 🎟️')}
+          >
+            <Ionicons name="ticket-outline" size={20} color="#fff" />
+            <Text style={styles.bookBtnText}>Register Now</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#060D1F' },
-  scroll: { flexGrow: 1, paddingBottom: 16 },
+  scroll: { flexGrow: 1, paddingBottom: 100 },
 
   // Loading / error states
   centerState: {
@@ -459,71 +419,70 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2, shadowRadius: 4, elevation: 4,
   },
   overlayBtnPressed: { opacity: 0.7, backgroundColor: 'rgba(0,0,0,0.6)' },
-  heroBottom: {
-    position: 'absolute', bottom: 20, left: layout.screenPaddingH,
-    flexDirection: 'row', gap: 10, alignItems: 'center',
-  },
+  heroBadgeRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   heroBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
   },
-  heroBadgeDot: { width: 8, height: 8, borderRadius: 4 },
-  heroBadgeText: { fontFamily: 'Inter_700Bold', fontSize: 12, letterSpacing: 0.3, textTransform: 'uppercase' },
+  heroBadgeDot: { width: 7, height: 7, borderRadius: 4 },
+  heroBadgeText: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase' },
   flaggedBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(239,68,68,0.2)',
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20,
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
   },
   flaggedText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#EF4444' },
-  heroTitleOverlay: {
-    position: 'absolute', bottom: 60, left: layout.screenPaddingH, right: layout.screenPaddingH,
+  heroFreeBadge: {
+    alignSelf: 'flex-start', backgroundColor: 'rgba(30,58,138,0.08)',
+    borderWidth: 1, borderColor: 'rgba(30,58,138,0.2)',
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
   },
-  heroTitle: { fontFamily: 'Inter_800ExtraBold', fontSize: 32, color: '#fff', lineHeight: 40, letterSpacing: -0.8, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
-  heroFreeBadge: { marginTop: 12, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 24 },
-  heroFreeText: { fontFamily: 'Inter_700Bold', fontSize: 14, color: '#1F2937', letterSpacing: 0.5 },
+  heroFreeText: { fontFamily: 'Inter_700Bold', fontSize: 11, color: '#1E3A8A', letterSpacing: 0.5 },
+  sheetTitleBlock: { gap: 10 },
+  sheetTitle: { fontFamily: 'Inter_800ExtraBold', fontSize: 28, color: '#0F172A', lineHeight: 36, letterSpacing: -0.6 },
 
   // Sheet
   sheet: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 36, borderTopRightRadius: 36,
-    marginTop: -32, paddingTop: 24,
+    borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    marginTop: -28, paddingTop: 16,
     paddingHorizontal: layout.screenPaddingH,
-    paddingBottom: 80, gap: 24,
+    paddingBottom: 48, gap: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -16 },
-    shadowOpacity: 0.1, shadowRadius: 32, elevation: 16,
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.08, shadowRadius: 24, elevation: 16,
   },
   grabber: {
-    width: 40, height: 5, borderRadius: 3,
-    backgroundColor: '#D1D5DB', alignSelf: 'center',
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: '#E5E7EB', alignSelf: 'center', marginBottom: 4,
   },
 
-  // Quick actions
-  quickActions: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 8 },
-  quickActionBtn: {
-    alignItems: 'center', gap: 4, paddingVertical: 12, paddingHorizontal: 8,
-    borderRadius: 12, backgroundColor: '#F9FAFB',
-    borderWidth: 1, borderColor: '#E5E7EB',
-    minWidth: 60,
+  // Sheet header: category + action icons
+  sheetHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  quickActionBtnPressed: { opacity: 0.8, backgroundColor: '#F3F4F6' },
-  quickActionText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#6B7280' },
+  sheetActions: { flexDirection: 'row', gap: 4 },
+  actionIconBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center', justifyContent: 'center',
+  },
 
-  divider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 8 },
+  divider: { height: 1, backgroundColor: '#F3F4F6' },
 
   // Category
-  categorySection: { alignItems: 'flex-start' },
   categoryPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#D1D5DB',
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+    backgroundColor: 'rgba(30,58,138,0.07)', borderWidth: 1, borderColor: 'rgba(30,58,138,0.15)',
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
   },
-  categoryText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#374151' },
+  categoryText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#1E3A8A' },
 
   // Sections
-  sectionHeader: { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#111827', marginBottom: 12 },
-  detailSection: { gap: 12 },
-  organizerSection: { gap: 12 },
+  sectionHeader: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#111827', marginBottom: 10 },
+  detailSection: { gap: 8 },
+  organizerSection: { gap: 8 },
 
   // Title section
   titleSection: { gap: 16 },
@@ -538,7 +497,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA', borderRadius: 20,
     borderWidth: 1, borderColor: '#F3F4F6', overflow: 'hidden',
   },
-  detailRow: { flexDirection: 'row', alignItems: 'center', padding: 18, gap: 14 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
   detailRowBorder: { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
   detailIconWrap: {
     width: 44, height: 44, borderRadius: 14,
@@ -631,16 +590,26 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: '#DC2626' },
 
-  bookBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
-  bookBtnPressed: { opacity: 0.9 },
-  bookBtnGrad: {
+  stickyFooter: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: '#fff',
+    paddingHorizontal: layout.screenPaddingH,
+    paddingTop: 12,
+    paddingBottom: 28,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  bookBtn: {
+    borderRadius: 16,
+    backgroundColor: '#1E3A8A',
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    minHeight: 60, gap: 10,
+    minHeight: 56, gap: 10,
   },
-  bookBtnText: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#fff' },
-  bookBtnArrow: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    alignItems: 'center', justifyContent: 'center',
-  },
+  bookBtnPressed: { opacity: 0.85 },
+  bookBtnText: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#fff' },
 });
