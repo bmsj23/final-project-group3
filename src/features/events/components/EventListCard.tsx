@@ -119,6 +119,12 @@ export function EventListCard({
         </>
       ) : (
         <View style={styles.compactRow}>
+          <Image
+            contentFit="cover"
+            source={event.coverImageUrl ? { uri: event.coverImageUrl } : undefined}
+            style={styles.compactImage}
+            transition={150}
+          />
           <View style={styles.compactBody}>
             {categoryName ? (
               <View style={styles.categoryBadge}>
@@ -224,6 +230,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  compactImage: {
+    backgroundColor: '#DBEAFE',
+    borderRadius: radius.md,
+    height: 80,
+    width: 80,
   },
   compactBody: {
     flex: 1,
