@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -72,6 +73,7 @@ export function EventListCard({
   variant = 'compact',
 }: EventListCardProps) {
   const joinedCount = event.capacity - event.remainingSlots;
+  const [isFavorited, setIsFavorited] = useState(false);
 
   return (
     <View style={[styles.shadowWrap, variant === 'featured' ? styles.featuredCard : null]}>
@@ -88,9 +90,13 @@ export function EventListCard({
             style={styles.featuredImage}
             transition={150}
           />
-          <View style={styles.favouriteBadge}>
-            <Ionicons color={colors.error} name="heart" size={16} />
-          </View>
+          <Pressable onPress={() => setIsFavorited(prev => !prev)} style={styles.favouriteBadge}>
+            <Ionicons
+              color={isFavorited ? colors.error : colors.textMuted}
+              name={isFavorited ? 'heart' : 'heart-outline'}
+              size={16}
+            />
+          </Pressable>
           <View style={styles.featuredBody}>
             <Text numberOfLines={2} style={styles.featuredTitle}>
               {event.title}
@@ -203,7 +209,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   joinButton: {
-    backgroundColor: colors.text,
+    backgroundColor: colors.primary,
     borderRadius: radius.xl,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
