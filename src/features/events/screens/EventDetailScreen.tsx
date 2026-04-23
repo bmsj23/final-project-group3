@@ -595,6 +595,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenPaddingH,
     paddingTop: 12,
     paddingBottom: 28,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
   },
   bookBtn: {
     borderRadius: 16,
