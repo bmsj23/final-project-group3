@@ -74,10 +74,9 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
 
   const detailRows = useMemo(() =>
     event ? [
-      { icon: 'calendar-outline'  as const, label: 'Date & Time',   value: formatEventDateTime(event.startsAt)            },
       { icon: 'location-outline'  as const, label: 'Location',      value: event.location                                  },
+      { icon: 'calendar-outline'  as const, label: 'Date & Time',   value: formatEventDateTime(event.startsAt)            },
       { icon: 'time-outline'      as const, label: 'Register By',   value: formatEventDateTime(event.registrationDeadline) },
-      { icon: 'people-outline'    as const, label: 'Capacity',      value: `${event.remainingSlots} of ${event.capacity} slots available` },
     ] : [], [event]);
 
   async function handleDelete() {
