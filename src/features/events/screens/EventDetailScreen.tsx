@@ -113,10 +113,10 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
     return (
       <SafeAreaView style={styles.root} edges={[]}>
         <StatusBar style="light" />
-        <LinearGradient colors={['#060D1F', '#0F1E3D']} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={['#060D1F', '#0F1E3D', '#1E3A8A']} style={StyleSheet.absoluteFill} />
         <View style={styles.centerState}>
           <View style={styles.stateIcon}>
-            <Ionicons name="hourglass-outline" size={28} color="#60A5FA" />
+            <Ionicons name="hourglass-outline" size={28} color="#93C5FD" />
           </View>
           <Text style={styles.stateTitle}>Loading event…</Text>
           <Text style={styles.stateSub}>Fetching the latest details.</Text>
@@ -130,7 +130,7 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
     return (
       <SafeAreaView style={styles.root} edges={[]}>
         <StatusBar style="light" />
-        <LinearGradient colors={['#060D1F', '#0F1E3D']} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={['#060D1F', '#0F1E3D', '#1E3A8A']} style={StyleSheet.absoluteFill} />
         <View style={styles.centerState}>
           <View style={[styles.stateIcon, { backgroundColor: 'rgba(239,68,68,0.12)' }]}>
             <Ionicons name="cloud-offline-outline" size={28} color="#EF4444" />
@@ -150,7 +150,7 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
     <SafeAreaView style={styles.root} edges={[]}>
       <StatusBar style="light" />
       <LinearGradient
-        colors={['#0B112F', '#120F46', '#1C1057']}
+        colors={['#060D1F', '#0F1E3D', '#1E3A8A']}
         style={StyleSheet.absoluteFill}
       />
 
@@ -171,7 +171,7 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             />
           ) : (
             <LinearGradient
-              colors={['#0F172A', '#1E3A8A', '#2563EB']}
+              colors={['#060D1F', '#0F2167', '#1E3A8A']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               style={styles.heroImage}
             >
@@ -321,7 +321,7 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
                   style={[styles.detailRow, i < detailRows.length - 1 && styles.detailRowBorder]}
                 >
                   <View style={styles.detailIconWrap}>
-                    <Ionicons name={row.icon} size={18} color="#3B82F6" />
+                    <Ionicons name={row.icon} size={18} color="#1E3A8A" />
                   </View>
                   <View style={styles.detailText}>
                     <Text style={styles.detailLabel}>{row.label}</Text>
@@ -337,7 +337,7 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             <Text style={styles.sectionHeader}>Organizer</Text>
             <View style={styles.organizerCard}>
               <View style={styles.organizerAvatar}>
-                <Ionicons name="person" size={24} color="#3B82F6" />
+                <Ionicons name="person" size={24} color="#1E3A8A" />
               </View>
               <View style={styles.organizerInfo}>
                 <Text style={styles.organizerName}>Event Organizer</Text>
@@ -394,13 +394,13 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
                 onPress={() => Alert.alert('Booking', 'Booking feature coming soon! 🎟️')}
               >
                 <LinearGradient
-                  colors={['#FF3CAC', '#784BA0', '#2B86C5']}
+                  colors={['#162D6E', '#1E3A8A', '#2952A3']}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                   style={styles.bookBtnGrad}
                 >
                   <Text style={styles.bookBtnText}>Register Now</Text>
                   <View style={styles.bookBtnArrow}>
-                    <Ionicons name="arrow-forward" size={18} color="#784BA0" />
+                    <Ionicons name="arrow-forward" size={18} color="#1E3A8A" />
                   </View>
                 </LinearGradient>
               </Pressable>
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
   detailRowBorder: { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
   detailIconWrap: {
     width: 44, height: 44, borderRadius: 14,
-    backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(30,58,138,0.08)', alignItems: 'center', justifyContent: 'center',
   },
   detailText: { flex: 1, gap: 4 },
   detailLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.8 },
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   },
   organizerAvatar: {
     width: 52, height: 52, borderRadius: 26,
-    backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(30,58,138,0.08)', alignItems: 'center', justifyContent: 'center',
   },
   organizerInfo: { flex: 1, gap: 4 },
   organizerName: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#111827' },
