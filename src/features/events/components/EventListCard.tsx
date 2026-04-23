@@ -123,7 +123,6 @@ export function EventListCard({
             contentFit="cover"
             source={event.coverImageUrl ? { uri: event.coverImageUrl } : undefined}
             style={styles.compactImage}
-            transition={150}
           />
           <View style={styles.compactBody}>
             {categoryName ? <Text style={styles.categoryText}>{categoryName.toUpperCase()}</Text> : null}
