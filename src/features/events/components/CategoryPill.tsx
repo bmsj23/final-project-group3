@@ -10,6 +10,7 @@ type CategoryPillProps = {
   label: string;
   selected: boolean;
   onPress: () => void;
+  icon?: string;
 };
 
 export function CategoryPill({ label, onPress, selected }: CategoryPillProps) {
@@ -51,6 +52,9 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
+  },
+  icon: {
+    marginRight: spacing.xs,
   },
   selected: {
     backgroundColor: colors.primary,

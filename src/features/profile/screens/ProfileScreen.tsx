@@ -23,7 +23,7 @@ import { spacing } from '../../../theme/spacing';
 
 type ProfileScreenProps = AppTabScreenProps<'Profile'>;
 
-// ─── Menu items for authenticated users ──────────────────────────────────────
+// â”€â”€â”€ Menu items for authenticated users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const MENU_ITEMS = [
   {
     id: 'notifications',
@@ -32,7 +32,7 @@ const MENU_ITEMS = [
     sublabel: 'Manage your alerts',
     color: '#FBBF24',
     bg: 'rgba(251,191,36,0.1)',
-    action: 'soon' as const,
+    action: 'notifications' as const,
   },
   {
     id: 'privacy',
@@ -54,14 +54,14 @@ const MENU_ITEMS = [
   },
 ];
 
-// ─── Helper: format join date ─────────────────────────────────────────────────
+// â”€â”€â”€ Helper: format join date â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function formatMemberSince(isoDate: string | undefined) {
   if (!isoDate) return 'Recently';
   const date = new Date(isoDate);
   return date.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
 }
 
-// ─── Helper: get role label + color ──────────────────────────────────────────
+// â”€â”€â”€ Helper: get role label + color â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function getRoleMeta(role: string | undefined, isGuest: boolean) {
   if (isGuest) return { label: 'Guest',        color: '#94A3B8', bg: 'rgba(148,163,184,0.12)' };
   if (role === 'admin') return { label: 'Admin', color: '#F472B6', bg: 'rgba(244,114,182,0.12)' };
@@ -73,7 +73,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [eventCount, setEventCount] = useState(0);
   const roleMeta = getRoleMeta(profile?.role, isGuest);
 
-  // ─── Entrance animations ────────────────────────────────────────────────
+  // â”€â”€â”€ Entrance animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const heroAnim   = useRef(new Animated.Value(0)).current;
   const avatarAnim = useRef(new Animated.Value(0)).current;
   const statsAnim  = useRef(new Animated.Value(0)).current;
@@ -88,7 +88,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
     ]).start();
   }, []);
 
-  // ─── Load event count when screen comes into focus ──────────────────────
+  // â”€â”€â”€ Load event count when screen comes into focus â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useFocusEffect(
     useCallback(() => {
       if (isGuest || !profile) {
@@ -102,7 +102,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
     }, [profile, isGuest]),
   );
 
-  // ─── Sign out confirmation ──────────────────────────────────────────────
+  // â”€â”€â”€ Sign out confirmation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function handleSignOut() {
     Alert.alert(
       'Sign Out',
@@ -118,7 +118,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
     );
   }
 
-  // ─── Menu action handler ────────────────────────────────────────────────
+  // â”€â”€â”€ Menu action handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function handleMenuPress(action: string) {
     if (action === 'navigate') {
       navigation.navigate('MyEvents');
@@ -128,19 +128,23 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
       navigation.navigate('CreateEvent');
       return;
     }
+    if (action === 'notifications') {
+      navigation.navigate('Notifications');
+      return;
+    }
     if (action === 'soon') {
-      Alert.alert('Coming Soon', 'This feature is being built. Stay tuned! 🚀');
+      Alert.alert('Coming Soon', 'This feature is being built. Stay tuned!');
     }
   }
 
-  // ─── Avatar initial ─────────────────────────────────────────────────────
+  // â”€â”€â”€ Avatar initial â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const initial = profile?.full_name?.slice(0, 1)?.toUpperCase() ?? (isGuest ? 'G' : '?');
 
   return (
     <SafeAreaView style={styles.root} edges={[]}>
       <StatusBar style="light" />
 
-      {/* ── Full dark background gradient ── */}
+      {/* â”€â”€ Full dark background gradient â”€â”€ */}
       <LinearGradient
         colors={['#060D1F', '#0F1E3D', '#0A1628']}
         start={{ x: 0, y: 0 }}
@@ -148,7 +152,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* ── Neon glow orbs (same universe as auth screens) ── */}
+      {/* â”€â”€ Neon glow orbs (same universe as auth screens) â”€â”€ */}
       <View style={styles.orbPink}   pointerEvents="none" />
       <View style={styles.orbCyan}   pointerEvents="none" />
       <View style={styles.orbPurple} pointerEvents="none" />
@@ -160,7 +164,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
         contentContainerStyle={styles.scroll}
       >
 
-        {/* ══════════════ HERO SECTION ══════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• HERO SECTION â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         <Animated.View
           style={[
             styles.hero,
@@ -175,19 +179,19 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
           {/* Header row: label + settings icon */}
           <View style={styles.heroHeader}>
             <Text style={styles.heroEyebrow}>
-              {isGuest ? '👋 Guest Mode' : profile?.role === 'admin' ? '⚡ Admin' : ''}
+              {isGuest ? 'Guest Mode' : profile?.role === 'admin' ? 'Admin' : ''}
             </Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Settings"
               style={({ pressed }) => [styles.settingsBtn, pressed && { opacity: 0.6 }]}
-              onPress={() => Alert.alert('Settings', 'Settings panel coming soon! 🚀')}
+              onPress={() => Alert.alert('Settings', 'Settings panel coming soon!')}
             >
               <Ionicons name="settings-outline" size={20} color="#CBD5E1" />
             </Pressable>
           </View>
 
-          {/* ── Large avatar with gradient ring ── */}
+          {/* â”€â”€ Large avatar with gradient ring â”€â”€ */}
           <Animated.View
             style={[
               styles.avatarSection,
@@ -254,7 +258,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
             )}
           </View>
 
-          {/* ── Stats row ── */}
+          {/* â”€â”€ Stats row â”€â”€ */}
           <Animated.View
             style={[
               styles.statsRow,
@@ -267,12 +271,12 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
             ]}
           >
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{isGuest ? '—' : eventCount}</Text>
+              <Text style={styles.statValue}>{isGuest ? '-' : eventCount}</Text>
               <Text style={styles.statLabel}>Events</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{isGuest ? '—' : '0'}</Text>
+              <Text style={styles.statValue}>{isGuest ? '-' : '0'}</Text>
               <Text style={styles.statLabel}>Bookings</Text>
             </View>
             <View style={styles.statDivider} />
@@ -285,7 +289,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
           </Animated.View>
         </Animated.View>
 
-        {/* ══════════════ WHITE BODY SHEET ══════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• WHITE BODY SHEET â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         <Animated.View
           style={[
             styles.body,
@@ -300,7 +304,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
           {/* Sheet handle */}
           <View style={styles.handle} />
 
-          {/* ── GUEST STATE ── */}
+          {/* â”€â”€ GUEST STATE â”€â”€ */}
           {isGuest ? (
             <View style={styles.guestSection}>
               {/* Guest card */}
@@ -353,7 +357,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
           ) : (
             <>
-              {/* ── AUTHENTICATED: Quick actions ── */}
+              {/* â”€â”€ AUTHENTICATED: Quick actions â”€â”€ */}
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>Quick Actions</Text>
                 <View style={styles.quickActions}>
@@ -361,7 +365,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                     { icon: 'calendar' as const,   label: 'My Events',    color: '#60A5FA', onPress: () => navigation.navigate('MyEvents')    },
                     { icon: 'add-circle' as const,  label: 'Create',       color: '#34D399', onPress: () => navigation.navigate('CreateEvent') },
                     { icon: 'compass' as const,     label: 'Explore',      color: '#FBBF24', onPress: () => navigation.navigate('Explore')     },
-                    { icon: 'notifications' as const, label: 'Alerts',     color: '#A78BFA', onPress: () => Alert.alert('Coming Soon', 'Notifications coming soon! 🔔') },
+                    { icon: 'notifications' as const, label: 'Alerts',     color: '#A78BFA', onPress: () => navigation.navigate('Notifications') },
                   ].map((action) => (
                     <Pressable
                       key={action.label}
@@ -378,15 +382,15 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                 </View>
               </View>
 
-              {/* ── Account info card ── */}
+              {/* â”€â”€ Account info card â”€â”€ */}
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>Account Info</Text>
                 <View style={styles.infoCard}>
                   {[
-                    { icon: 'mail-outline' as const,    label: 'Email',       value: profile?.email ?? '—'                },
+                    { icon: 'mail-outline' as const,    label: 'Email',       value: profile?.email ?? '-'                },
                     { icon: 'shield-outline' as const,   label: 'Role',        value: roleMeta.label                       },
                     { icon: 'calendar-outline' as const, label: 'Joined',      value: formatMemberSince(profile?.created_at) },
-                    { icon: 'person-outline' as const,   label: 'Account ID',  value: (profile?.id?.slice(0, 8) ?? '—') + '...' },
+                    { icon: 'person-outline' as const,   label: 'Account ID',  value: (profile?.id?.slice(0, 8) ?? '-') + '...' },
                   ].map((row, i, arr) => (
                     <View key={row.label} style={[styles.infoRow, i < arr.length - 1 && styles.infoRowBorder]}>
                       <View style={styles.infoIconWrap}>
@@ -399,7 +403,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                 </View>
               </View>
 
-              {/* ── Menu items ── */}
+              {/* â”€â”€ Menu items â”€â”€ */}
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>More</Text>
                 <View style={styles.menuCard}>
@@ -421,19 +425,13 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                         <Text style={styles.menuLabel}>{item.label}</Text>
                         <Text style={styles.menuSublabel}>{item.sublabel}</Text>
                       </View>
-                      {item.action === 'soon' ? (
-                        <View style={styles.soonPill}>
-                          <Text style={styles.soonText}>Soon</Text>
-                        </View>
-                      ) : (
-                        <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
-                      )}
+                      <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
                     </Pressable>
                   ))}
                 </View>
               </View>
 
-              {/* ── Sign out button ── */}
+              {/* â”€â”€ Sign out button â”€â”€ */}
               <Pressable
                 accessibilityRole="button"
                 style={({ pressed }) => [styles.signOutBtn, pressed && { opacity: 0.8 }]}
@@ -447,7 +445,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
               </Pressable>
 
               {/* App version footer */}
-              <Text style={styles.versionText}>Eventure v1.0.0 · Made with ❤️ in PH</Text>
+              <Text style={styles.versionText}>Eventure v1.0.0 | Made with love in PH</Text>
             </>
           )}
         </Animated.View>
@@ -456,14 +454,14 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const styles = StyleSheet.create({
 
   root: { flex: 1, backgroundColor: '#060D1F' },
 
   scroll: { flexGrow: 1 },
 
-  // ── Orbs ──────────────────────────────────────────────────────────────────
+  // â”€â”€ Orbs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   orbPink: {
     position: 'absolute', top: -60, left: -60,
     width: 260, height: 260, borderRadius: 130,
@@ -480,7 +478,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#7C3AED', opacity: 0.08,
   },
 
-  // ── Hero ──────────────────────────────────────────────────────────────────
+  // â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   hero: {
     alignItems: 'center',
     paddingTop: 58,
@@ -591,7 +589,7 @@ const styles = StyleSheet.create({
   },
   statDivider: { width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.08)' },
 
-  // ── White body sheet ───────────────────────────────────────────────────────
+  // â”€â”€ White body sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   body: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 40,
@@ -610,7 +608,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center', marginBottom: 24,
   },
 
-  // ── Section ────────────────────────────────────────────────────────────────
+  // â”€â”€ Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   section: { paddingHorizontal: spacing.xl, marginBottom: 24 },
   sectionLabel: {
     fontFamily: 'Inter_700Bold', fontSize: 12,
@@ -618,7 +616,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', marginBottom: 12,
   },
 
-  // ── Quick actions ──────────────────────────────────────────────────────────
+  // â”€â”€ Quick actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   quickActions: { flexDirection: 'row', justifyContent: 'space-between' },
   quickAction: { alignItems: 'center', gap: 8, flex: 1 },
   quickActionIcon: {
@@ -630,7 +628,7 @@ const styles = StyleSheet.create({
     color: '#334155',
   },
 
-  // ── Info card ──────────────────────────────────────────────────────────────
+  // â”€â”€ Info card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   infoCard: {
     backgroundColor: '#F8FAFC',
     borderRadius: radius.xl,
@@ -657,7 +655,7 @@ const styles = StyleSheet.create({
     color: '#0F172A', flex: 1, textAlign: 'right',
   },
 
-  // ── Menu card ─────────────────────────────────────────────────────────────
+  // â”€â”€ Menu card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   menuCard: {
     backgroundColor: '#F8FAFC',
     borderRadius: radius.xl,
@@ -694,7 +692,7 @@ const styles = StyleSheet.create({
     color: '#D97706', letterSpacing: 0.3,
   },
 
-  // ── Sign out ───────────────────────────────────────────────────────────────
+  // â”€â”€ Sign out â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   signOutBtn: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: spacing.xl,
@@ -720,7 +718,7 @@ const styles = StyleSheet.create({
     color: '#CBD5E1', textAlign: 'center', marginTop: 4,
   },
 
-  // ── Guest section ──────────────────────────────────────────────────────────
+  // â”€â”€ Guest section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   guestSection: { paddingHorizontal: spacing.xl, gap: spacing.md },
   guestCard: {
     borderRadius: radius.xl,
