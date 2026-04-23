@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -72,6 +73,7 @@ export function EventListCard({
   variant = 'compact',
 }: EventListCardProps) {
   const joinedCount = event.capacity - event.remainingSlots;
+  const [isFavorited, setIsFavorited] = useState(false);
 
   return (
     <View style={[styles.shadowWrap, variant === 'featured' ? styles.featuredCard : null]}>
@@ -88,9 +90,13 @@ export function EventListCard({
             style={styles.featuredImage}
             transition={150}
           />
-          <View style={styles.favouriteBadge}>
-            <Ionicons color={colors.error} name="heart" size={16} />
-          </View>
+          <Pressable onPress={() => setIsFavorited(prev => !prev)} style={styles.favouriteBadge}>
+            <Ionicons
+              color={isFavorited ? colors.error : colors.textMuted}
+              name={isFavorited ? 'heart' : 'heart-outline'}
+              size={16}
+            />
+          </Pressable>
           <View style={styles.featuredBody}>
             <Text numberOfLines={2} style={styles.featuredTitle}>
               {event.title}
@@ -117,23 +123,26 @@ export function EventListCard({
             contentFit="cover"
             source={event.coverImageUrl ? { uri: event.coverImageUrl } : undefined}
             style={styles.compactImage}
-            transition={150}
           />
           <View style={styles.compactBody}>
+            {categoryName ? <Text style={styles.categoryText}>{categoryName.toUpperCase()}</Text> : null}
             <Text numberOfLines={1} style={styles.compactTitle}>
               {event.title}
             </Text>
-            <Text numberOfLines={1} style={styles.meta}>
-              {formatEventDateTime(event.startsAt)}
-            </Text>
-            <Text numberOfLines={1} style={styles.meta}>
-              {event.location}
-            </Text>
-            {categoryName ? <Text style={styles.category}>{categoryName}</Text> : null}
+            <View style={styles.metaRow}>
+              <Ionicons color={colors.textMuted} name="calendar-outline" size={12} />
+              <Text numberOfLines={1} style={styles.meta}>{formatEventDateTime(event.startsAt)}</Text>
+            </View>
+            <View style={styles.metaRow}>
+              <Ionicons color={colors.textMuted} name="location-outline" size={12} />
+              <Text numberOfLines={1} style={styles.meta}>{event.location}</Text>
+            </View>
           </View>
           <View style={styles.trailingColumn}>
             <Text style={styles.spotsText}>{event.remainingSlots} spots</Text>
-            <Text style={styles.joinText}>JOIN NOW</Text>
+            <View style={styles.joinButton}>
+              <Text style={styles.joinButtonText}>JOIN</Text>
+            </View>
           </View>
         </View>
       )}
@@ -160,7 +169,7 @@ const styles = StyleSheet.create({
     width: 292,
   },
   compactCard: {
-    padding: spacing.sm,
+    padding: spacing.md,
   },
   featuredImage: {
     backgroundColor: '#DBEAFE',
@@ -203,7 +212,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   joinButton: {
-    backgroundColor: colors.text,
+    backgroundColor: colors.primary,
     borderRadius: radius.xl,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
@@ -220,34 +229,30 @@ const styles = StyleSheet.create({
   compactImage: {
     backgroundColor: '#DBEAFE',
     borderRadius: radius.md,
-    height: 72,
-    width: 72,
+    height: 80,
+    width: 80,
   },
   compactBody: {
     flex: 1,
-    gap: 2,
+    gap: spacing.xxs,
+  },
+  categoryText: {
+    ...typography.caption4,
+    color: colors.primary,
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
   compactTitle: {
     ...typography.button1,
     color: colors.text,
-    fontSize: 17,
-  },
-  category: {
-    ...typography.caption3,
-    color: colors.primary,
-    marginTop: 2,
+    fontSize: 16,
   },
   trailingColumn: {
     alignItems: 'flex-end',
-    gap: spacing.xs,
-    width: 72,
+    gap: spacing.sm,
   },
   spotsText: {
     ...typography.caption3,
     color: colors.primary,
-  },
-  joinText: {
-    ...typography.caption3,
-    color: colors.text,
   },
 });
