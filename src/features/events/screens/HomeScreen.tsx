@@ -230,6 +230,12 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                     style={styles.fullBleedScroll}
                   >
                     <View style={styles.categoryRow}>
+                      <CategoryPill
+                        key="all"
+                        label="All"
+                        onPress={() => setSelectedCategoryId(null)}
+                        selected={selectedCategoryId === null}
+                      />
                       {topCategories.map((category) => (
                         <CategoryPill
                           key={category.id}
