@@ -281,7 +281,6 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             </View>
           </View>
 
-          <View style={styles.divider} />
 
           {/* ── Detail rows ── */}
           <View style={styles.detailSection}>
@@ -290,7 +289,7 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
               {detailRows.map((row, i) => (
                 <View
                   key={row.label}
-                  style={[styles.detailRow, i < detailRows.length - 1 && styles.detailRowBorder]}
+                  style={styles.detailRow}
                 >
                   <View style={styles.detailIconWrap}>
                     <Ionicons name={row.icon} size={18} color="#1E3A8A" />
