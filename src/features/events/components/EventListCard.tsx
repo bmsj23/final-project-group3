@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   featuredCardInner: {
-    height: '100%',
+    flex: 1,
   },
   featuredCard: {
     width: 292,
