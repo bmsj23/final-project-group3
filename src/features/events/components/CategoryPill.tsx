@@ -10,22 +10,28 @@ type CategoryPillProps = {
   label: string;
   selected: boolean;
   onPress: () => void;
-  icon?: string;
 };
 
 export function CategoryPill({ label, onPress, selected }: CategoryPillProps) {
+  const scale = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(1)).current;
 
   const onPressIn = () => {
-    Animated.timing(opacity, { toValue: 0.6, duration: 80, useNativeDriver: true }).start();
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 0.93, useNativeDriver: true, speed: 40, bounciness: 0 }),
+      Animated.timing(opacity, { toValue: 0.75, duration: 60, useNativeDriver: true }),
+    ]).start();
   };
 
   const onPressOut = () => {
-    Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 4 }),
+      Animated.timing(opacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+    ]).start();
   };
 
   return (
-    <Animated.View style={{ opacity }}>
+    <Animated.View style={{ opacity, transform: [{ scale }] }}>
       <Pressable
         accessibilityRole="button"
         onPress={onPress}
@@ -41,7 +47,6 @@ export function CategoryPill({ label, onPress, selected }: CategoryPillProps) {
   );
 }
 
-
 const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
@@ -52,9 +57,6 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-  },
-  icon: {
-    marginRight: spacing.xs,
   },
   selected: {
     backgroundColor: colors.primary,

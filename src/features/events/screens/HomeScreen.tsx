@@ -42,8 +42,8 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const [query, setQuery] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  // Prevent re-fetching every time the tab is focused.
   const hasFetched = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   const loadFeed = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -86,9 +86,8 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const filteredEvents = useMemo(() => filterEventsByQuery(events, query, categoryNameById), [categoryNameById, events, query]);
   const featuredEvents = events.slice(0, 4);
   const listEvents = useMemo(() => {
-    const base = events.slice(0, 8);
-    if (!selectedCategoryId) return base;
-    return base.filter((e) => e.categoryId === selectedCategoryId);
+    if (!selectedCategoryId) return events.slice(0, 8);
+    return events.filter((e) => e.categoryId === selectedCategoryId);
   }, [events, selectedCategoryId]);
   const topCategories = categories.slice(0, 5);
   const isSearching = query.trim().length > 0;
@@ -99,6 +98,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardWrap}>
         <View style={styles.screen}>
           <ScrollView
+            ref={scrollRef}
             bounces={false}
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
@@ -233,14 +233,20 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                       <CategoryPill
                         key="all"
                         label="All"
-                        onPress={() => setSelectedCategoryId(null)}
+                        onPress={() => {
+                          setSelectedCategoryId(null);
+                          scrollRef.current?.scrollTo({ y: 0, animated: true });
+                        }}
                         selected={selectedCategoryId === null}
                       />
                       {topCategories.map((category) => (
                         <CategoryPill
                           key={category.id}
                           label={category.name}
-                          onPress={() => setSelectedCategoryId(prev => prev === category.id ? null : category.id)}
+                          onPress={() => {
+                            setSelectedCategoryId(prev => prev === category.id ? null : category.id);
+                            scrollRef.current?.scrollTo({ y: 0, animated: true });
+                          }}
                           selected={selectedCategoryId === category.id}
                         />
                       ))}
