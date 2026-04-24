@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { AppTabScreenProps } from '../../../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -42,8 +42,22 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const [query, setQuery] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  // Prevent re-fetching every time the tab is focused.
   const hasFetched = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const bodyY = useRef(0);
+  const categoriesY = useRef(0);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: bodyY.current + categoriesY.current, animated: true });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [selectedCategoryId]);
 
   const loadFeed = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -86,9 +100,8 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const filteredEvents = useMemo(() => filterEventsByQuery(events, query, categoryNameById), [categoryNameById, events, query]);
   const featuredEvents = events.slice(0, 4);
   const listEvents = useMemo(() => {
-    const base = events.slice(0, 8);
-    if (!selectedCategoryId) return base;
-    return base.filter((e) => e.categoryId === selectedCategoryId);
+    if (!selectedCategoryId) return events.slice(0, 8);
+    return events.filter((e) => e.categoryId === selectedCategoryId);
   }, [events, selectedCategoryId]);
   const topCategories = categories.slice(0, 5);
   const isSearching = query.trim().length > 0;
@@ -99,6 +112,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardWrap}>
         <View style={styles.screen}>
           <ScrollView
+            ref={scrollRef}
             bounces={false}
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
@@ -145,7 +159,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               }
             />
 
-            <View style={styles.body}>
+            <View style={styles.body} onLayout={(e) => { bodyY.current = e.nativeEvent.layout.y; }}>
               {errorMessage ? (
                 <EmptyStateCard
                   body={errorMessage}
@@ -215,11 +229,13 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                     </View>
                   </ScrollView>
 
-                  <SectionHeader
-                    actionLabel="VIEW ALL"
-                    onPressAction={() => navigation.navigate('Explore')}
-                    title="Browse Categories"
-                  />
+                  <View onLayout={(e) => { categoriesY.current = e.nativeEvent.layout.y; }}>
+                    <SectionHeader
+                      actionLabel="VIEW ALL"
+                      onPressAction={() => navigation.navigate('Explore')}
+                      title="Browse Categories"
+                    />
+                  </View>
 
                   <ScrollView
                     alwaysBounceHorizontal={false}
@@ -247,16 +263,24 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                     </View>
                   </ScrollView>
 
-                  <View style={styles.list}>
-                    {listEvents.map((event) => (
-                      <EventListCard
-                        key={event.id}
-                        categoryName={categoryNameById.get(event.categoryId)}
-                        event={event}
-                        onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
-                      />
-                    ))}
-                  </View>
+                  {listEvents.length === 0 && selectedCategoryId !== null ? (
+                    <EmptyStateCard
+                      body="No events found in this category yet. Check back later."
+                      icon="calendar-outline"
+                      title="No events here"
+                    />
+                  ) : (
+                    <View style={styles.list}>
+                      {listEvents.map((event) => (
+                        <EventListCard
+                          key={event.id}
+                          categoryName={categoryNameById.get(event.categoryId)}
+                          event={event}
+                          onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
+                        />
+                      ))}
+                    </View>
+                  )}
                 </>
               )}
             </View>
