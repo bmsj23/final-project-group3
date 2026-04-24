@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { AppTabScreenProps } from '../../../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -46,6 +46,18 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const scrollRef = useRef<ScrollView>(null);
   const bodyY = useRef(0);
   const categoriesY = useRef(0);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: bodyY.current + categoriesY.current, animated: true });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [selectedCategoryId]);
 
   const loadFeed = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -237,20 +249,14 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                       <CategoryPill
                         key="all"
                         label="All"
-                        onPress={() => {
-                          setSelectedCategoryId(null);
-                          scrollRef.current?.scrollTo({ y: bodyY.current + categoriesY.current, animated: true });
-                        }}
+                        onPress={() => setSelectedCategoryId(null)}
                         selected={selectedCategoryId === null}
                       />
                       {topCategories.map((category) => (
                         <CategoryPill
                           key={category.id}
                           label={category.name}
-                          onPress={() => {
-                            setSelectedCategoryId(prev => prev === category.id ? null : category.id);
-                            scrollRef.current?.scrollTo({ y: bodyY.current + categoriesY.current, animated: true });
-                          }}
+                          onPress={() => setSelectedCategoryId(prev => prev === category.id ? null : category.id)}
                           selected={selectedCategoryId === category.id}
                         />
                       ))}
