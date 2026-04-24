@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text } from 'react-native';
 
 import { colors } from '../../../theme/colors';
 import { radius } from '../../../theme/radius';
@@ -18,15 +18,15 @@ export function CategoryPill({ label, onPress, selected }: CategoryPillProps) {
 
   const onPressIn = () => {
     Animated.parallel([
-      Animated.spring(scale, { toValue: 0.93, useNativeDriver: true, speed: 40, bounciness: 0 }),
-      Animated.timing(opacity, { toValue: 0.75, duration: 60, useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 0.94, duration: 80, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0.7, duration: 80, easing: Easing.out(Easing.quad), useNativeDriver: true }),
     ]).start();
   };
 
   const onPressOut = () => {
     Animated.parallel([
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 4 }),
-      Animated.timing(opacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 1, duration: 200, easing: Easing.out(Easing.back(1.5)), useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 200, easing: Easing.out(Easing.quad), useNativeDriver: true }),
     ]).start();
   };
 
