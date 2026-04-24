@@ -234,8 +234,6 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
           <Text style={styles.heroSub}>
             Fill in the details below to publish your event to campus attendees.
           </Text>
-
-          {/* Synced step tracker */}
         </Animated.View>
 
         {/* ── White form sheet ── */}
@@ -356,7 +354,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15, shadowRadius: 20, elevation: 16,
   },
   formHandle: {
-    width: 40, height: 5, borderRadius: 3,
-    backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 20,
+    width: 0, height: 0, borderRadius: 3,
+    backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 0,
   },
 });

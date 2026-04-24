@@ -33,6 +33,7 @@ export async function pickEventImageAsset() {
 
   const result = await ImagePicker.launchImageLibraryAsync({
     allowsEditing: false,
+    allowsMultipleSelection: true,
     mediaTypes: 'images',
     quality: 0.8,
     selectionLimit: 0,

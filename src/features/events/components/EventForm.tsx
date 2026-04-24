@@ -11,6 +11,7 @@ import {
   Animated,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -286,11 +287,7 @@ type PickerTarget = 'eventDate' | 'eventTime' | 'deadlineDate' | 'deadlineTime';
 
 function getDateFromInput(value: string) {
   const isoValue = parseDateTimeInput(value);
-
-  if (!isoValue) {
-    return null;
-  }
-
+  if (!isoValue) return null;
   const date = new Date(isoValue);
   return Number.isFinite(date.getTime()) ? date : null;
 }
@@ -322,29 +319,14 @@ function setTimePart(currentValue: string, nextTime: Date) {
 
 function formatPickerDate(value: string) {
   const date = getDateFromInput(value);
-
-  if (!date) {
-    return 'Select date';
-  }
-
-  return date.toLocaleDateString('en-PH', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  if (!date) return 'Select date';
+  return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function formatPickerTime(value: string) {
   const date = getDateFromInput(value);
-
-  if (!date) {
-    return 'Select time';
-  }
-
-  return date.toLocaleTimeString('en-PH', {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  if (!date) return 'Select time';
+  return date.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
 }
 
 function getPickerTitle(target: PickerTarget | null) {
@@ -371,7 +353,6 @@ function PickerField({
   onPress: () => void;
 }) {
   const hasError = Boolean(error);
-
   return (
     <View style={styles.fieldWrap}>
       <FieldLabel text={label} required={required} />
@@ -417,9 +398,11 @@ export function EventForm({
   const [tagsInput, setTagsInput] = useState(tagsToInput(initialValues.tags));
   const [errors, setErrors] = useState<EventFormErrors>({});
   const [selectedImages, setSelectedImages] = useState<EventImageAsset[]>([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [removeExisting, setRemoveExisting] = useState(false);
   const [step, setStep] = useState(0);
   const [activePicker, setActivePicker] = useState<PickerTarget | null>(null);
+  const galleryScrollRef = useRef<ScrollView | null>(null);
 
   // Slide animation between steps
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -440,6 +423,7 @@ export function EventForm({
     setTagsInput(tagsToInput(initialValues.tags));
     setErrors({});
     setSelectedImages([]);
+    setSelectedImageIndex(0);
     setRemoveExisting(false);
     setStep(0);
     setActivePicker(null);
@@ -479,25 +463,42 @@ export function EventForm({
     values,
   ]);
 
-  const previewUri = selectedImages.length > 0 ? selectedImages[0].uri : (removeExisting ? null : initialValues.coverImageUrl ?? null);
+  // ── Derived preview URI ─────────────────────────────────────────────────
+  const previewUri = selectedImages.length > 0
+    ? selectedImages[selectedImageIndex]?.uri
+    : (removeExisting ? null : initialValues.coverImageUrl ?? null);
 
+  // ── Helpers ─────────────────────────────────────────────────────────────
   function updateValue<K extends keyof EventFormValues>(key: K, val: EventFormValues[K]) {
     setValues(p => ({ ...p, [key]: val }));
     setErrors(p => ({ ...p, [key]: undefined }));
   }
 
+  // ── FIX: allowsMultipleSelection is set in imagePicker.ts; here we
+  //    merge the returned array into state inside the updater so we never
+  //    read stale selectedImages.length from the closure.
   async function handlePickImage() {
     setErrors(p => ({ ...p, coverImageUrl: undefined }));
     const { data, error } = await pickEventImageAsset();
     if (error) { setErrors(p => ({ ...p, coverImageUrl: error.message })); return; }
     if (!data) return;
-    setSelectedImages(prev => [...prev, ...(Array.isArray(data) ? data : [data])]);
+
+    const incoming = Array.isArray(data) ? data : [data];
+
+    setSelectedImages(prev => {
+      const updated = [...prev, ...incoming];
+      // Set index to the last newly added image — safe because we're inside the updater
+      setSelectedImageIndex(updated.length - 1);
+      return updated;
+    });
     setRemoveExisting(false);
   }
 
   function handleRemoveImage(index: number) {
     if (selectedImages.length > 0) {
-      setSelectedImages(selectedImages.filter((_, i) => i !== index));
+      const newImages = selectedImages.filter((_, i) => i !== index);
+      setSelectedImages(newImages);
+      setSelectedImageIndex(Math.min(selectedImageIndex, Math.max(0, newImages.length - 1)));
       return;
     }
     if (initialValues.coverImageUrl) setRemoveExisting(v => !v);
@@ -505,7 +506,28 @@ export function EventForm({
 
   function handleClearAll() {
     setSelectedImages([]);
+    setSelectedImageIndex(0);
     setRemoveExisting(true);
+  }
+
+  function scrollGalleryLeft() {
+    const itemWidth = 60 + spacing.sm;
+    galleryScrollRef.current?.scrollTo({
+      x: Math.max(0, selectedImageIndex * itemWidth - itemWidth),
+      animated: true,
+    });
+    setSelectedImageIndex(Math.max(0, selectedImageIndex - 1));
+  }
+
+  function scrollGalleryRight() {
+    const itemWidth = 60 + spacing.sm;
+    if (selectedImageIndex < selectedImages.length - 1) {
+      galleryScrollRef.current?.scrollTo({
+        x: (selectedImageIndex + 1) * itemWidth,
+        animated: true,
+      });
+      setSelectedImageIndex(selectedImageIndex + 1);
+    }
   }
 
   function getPickerValue(target: PickerTarget) {
@@ -520,30 +542,25 @@ export function EventForm({
   }
 
   function handlePickerChange(target: PickerTarget, event: DateTimePickerEvent, selectedDate?: Date) {
-    if (event.type !== 'set' || !selectedDate) {
-      return;
-    }
+    if (event.type !== 'set' || !selectedDate) return;
 
     if (target === 'eventDate') {
       setDateTimeInput(setDatePart(dateTimeInput, selectedDate));
-      setErrors((prev) => ({ ...prev, dateTime: undefined }));
+      setErrors(prev => ({ ...prev, dateTime: undefined }));
       return;
     }
-
     if (target === 'eventTime') {
       setDateTimeInput(setTimePart(dateTimeInput, selectedDate));
-      setErrors((prev) => ({ ...prev, dateTime: undefined }));
+      setErrors(prev => ({ ...prev, dateTime: undefined }));
       return;
     }
-
     if (target === 'deadlineDate') {
       setDeadlineInput(setDatePart(deadlineInput, selectedDate));
-      setErrors((prev) => ({ ...prev, registrationDeadline: undefined }));
+      setErrors(prev => ({ ...prev, registrationDeadline: undefined }));
       return;
     }
-
     setDeadlineInput(setTimePart(deadlineInput, selectedDate));
-    setErrors((prev) => ({ ...prev, registrationDeadline: undefined }));
+    setErrors(prev => ({ ...prev, registrationDeadline: undefined }));
   }
 
   // ── Step nav with validation ────────────────────────────────────────────
@@ -562,7 +579,6 @@ export function EventForm({
   }
 
   async function handleSubmit() {
-    // Final full validation just in case
     const parsedCap = Number.parseInt(capacityInput.trim(), 10);
     const nextValues: EventFormValues = {
       ...values,
@@ -575,7 +591,6 @@ export function EventForm({
     const allErrors = validateEventForm(nextValues);
     if (Object.keys(allErrors).length > 0) {
       setErrors(allErrors);
-      // Jump back to the first step that has errors
       const step0Fields: (keyof EventFormValues)[] = ['title', 'category', 'location', 'capacity', 'description'];
       const step1Fields: (keyof EventFormValues)[] = ['dateTime', 'registrationDeadline'];
       if (step0Fields.some(f => allErrors[f])) { animateStep(0); return; }
@@ -614,14 +629,12 @@ export function EventForm({
                     mode="single"
                     date={getPickerValue(activePicker)}
                     minDate={getTodayAtMidnight()}
-                    // ── Disable dates after the event date for the deadline picker ──
                     disabledDates={
                       activePicker === 'deadlineDate'
                         ? (date) => {
                           const eventDate = getDateFromInput(dateTimeInput);
                           if (!eventDate || !date) return false;
                           const d = dayjs(date).toDate();
-                          // Strip time — only compare calendar days
                           d.setHours(0, 0, 0, 0);
                           const event = new Date(eventDate);
                           event.setHours(0, 0, 0, 0);
@@ -669,6 +682,7 @@ export function EventForm({
           </Pressable>
         </Pressable>
       </Modal>
+
       {/* ── Step progress bar ── */}
       <View style={styles.progress}>
         {STEPS.map((s, i) => (
@@ -694,7 +708,10 @@ export function EventForm({
       </View>
 
       {/* ── Animated step content ── */}
-      <Animated.View style={{ opacity: slideAnim.interpolate({ inputRange: [-30, 0, 30], outputRange: [0, 1, 0] }), transform: [{ translateX: slideAnim }] }}>
+      <Animated.View style={{
+        opacity: slideAnim.interpolate({ inputRange: [-30, 0, 30], outputRange: [0, 1, 0] }),
+        transform: [{ translateX: slideAnim }],
+      }}>
 
         {/* ══ STEP 0: DETAILS ══ */}
         {step === 0 && (
@@ -715,7 +732,9 @@ export function EventForm({
                     <Image contentFit="cover" source={{ uri: previewUri }} style={styles.coverImg} transition={150} />
                     <View style={styles.coverOverlay}>
                       <Ionicons name="camera" size={20} color="#fff" />
-                      <Text style={styles.coverOverlayText}>Add More Photos</Text>
+                      <Text style={styles.coverOverlayText}>
+                        {selectedImages.length > 0 ? 'Add More Photos' : 'Change Photo'}
+                      </Text>
                     </View>
                   </>
                 ) : (
@@ -729,20 +748,48 @@ export function EventForm({
                 )}
               </Pressable>
 
-              {/* Images gallery */}
+              {/* Images gallery - Horizontal scrollable */}
               {selectedImages.length > 0 && (
-                <View style={styles.imagesGallery}>
-                  {selectedImages.map((img, idx) => (
-                    <View key={`${idx}-${img.fileName}`} style={styles.galleryItem}>
-                      <Image contentFit="cover" source={{ uri: img.uri }} style={styles.galleryImage} transition={150} />
+                <View style={styles.galleryContainer}>
+                  {selectedImages.length > 1 && (
+                    <Pressable style={styles.arrowBtn} onPress={scrollGalleryLeft} disabled={selectedImageIndex === 0}>
+                      <Ionicons name="chevron-back" size={24} color={selectedImageIndex === 0 ? '#CBD5E1' : '#0F172A'} />
+                    </Pressable>
+                  )}
+                  <ScrollView
+                    ref={galleryScrollRef}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    scrollEventThrottle={16}
+                    style={styles.galleryScroll}
+                  >
+                    {selectedImages.map((img, idx) => (
                       <Pressable
-                        style={styles.galleryRemoveBtn}
-                        onPress={() => handleRemoveImage(idx)}
+                        key={`${idx}-${img.fileName}`}
+                        style={[styles.galleryThumbnail, idx === selectedImageIndex && styles.galleryThumbnailActive]}
+                        onPress={() => {
+                          setSelectedImageIndex(idx);
+                          galleryScrollRef.current?.scrollTo({
+                            x: idx * (60 + spacing.sm),
+                            animated: true,
+                          });
+                        }}
                       >
-                        <Ionicons name="close" size={16} color="#fff" />
+                        <Image contentFit="cover" source={{ uri: img.uri }} style={styles.galleryThumbImage} transition={150} />
+                        <Pressable
+                          style={styles.galleryThumbRemoveBtn}
+                          onPress={() => handleRemoveImage(idx)}
+                        >
+                          <Ionicons name="close" size={14} color="#fff" />
+                        </Pressable>
                       </Pressable>
-                    </View>
-                  ))}
+                    ))}
+                  </ScrollView>
+                  {selectedImages.length > 1 && (
+                    <Pressable style={styles.arrowBtn} onPress={scrollGalleryRight} disabled={selectedImageIndex === selectedImages.length - 1}>
+                      <Ionicons name="chevron-forward" size={24} color={selectedImageIndex === selectedImages.length - 1 ? '#CBD5E1' : '#0F172A'} />
+                    </Pressable>
+                  )}
                 </View>
               )}
 
@@ -903,7 +950,6 @@ export function EventForm({
                 />
               </View>
 
-              {/* Visual date preview if both are valid */}
               {parseDateTimeInput(dateTimeInput) && parseDateTimeInput(deadlineInput) &&
                 isFutureIsoDate(parseDateTimeInput(dateTimeInput)) &&
                 isFutureIsoDate(parseDateTimeInput(deadlineInput)) && (
@@ -917,7 +963,7 @@ export function EventForm({
                     <View style={styles.datePreviewRow}>
                       <Ionicons name="checkmark-circle" size={15} color="#10B981" />
                       <Text style={styles.datePreviewText}>
-                        Deadline: {new Date(parseDateTimeInput(deadlineInput)).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
+                        Registration: {new Date(parseDateTimeInput(deadlineInput)).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
                       </Text>
                     </View>
                   </View>
@@ -935,7 +981,6 @@ export function EventForm({
         {/* ══ STEP 2: REVIEW ══ */}
         {step === 2 && (
           <View style={styles.stepContent}>
-            {/* Cover preview */}
             {previewUri ? (
               <View style={styles.reviewCoverWrap}>
                 <Image contentFit="cover" source={{ uri: previewUri }} style={styles.reviewCover} transition={150} />
@@ -956,7 +1001,6 @@ export function EventForm({
               </View>
             )}
 
-            {/* Details review */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Review Details</Text>
               <View style={styles.reviewGrid}>
@@ -973,12 +1017,11 @@ export function EventForm({
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Schedule</Text>
               <View style={styles.reviewGrid}>
-                <ReviewRow icon="calendar-outline" label="Event Date" value={dateTimeInput || '—'} color="#60A5FA" />
-                <ReviewRow icon="time-outline" label="Registration Closes" value={deadlineInput || '—'} color="#EF4444" />
+                <ReviewRow icon="calendar-outline" label="Event Date" value={dateTimeInput ? new Date(parseDateTimeInput(dateTimeInput) || '').toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—'} color="#60A5FA" />
+                <ReviewRow icon="time-outline" label="Registration Closes" value={deadlineInput ? new Date(parseDateTimeInput(deadlineInput) || '').toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—'} color="#EF4444" />
               </View>
             </View>
 
-            {/* Description preview */}
             {values.description.trim() ? (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Description</Text>
@@ -986,7 +1029,6 @@ export function EventForm({
               </View>
             ) : null}
 
-            {/* Global error */}
             {errorMessage ? (
               <View style={styles.errorCard}>
                 <View style={styles.errorCardIcon}>
@@ -1017,12 +1059,12 @@ export function EventForm({
 const styles = StyleSheet.create({
   root: { flex: 1, gap: spacing.lg },
 
-  // Progress bar
   progress: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.xxs,
+    borderTopWidth: 0,
   },
   progressItem: { flex: 1, alignItems: 'center', position: 'relative' },
   progressDot: {
@@ -1045,7 +1087,6 @@ const styles = StyleSheet.create({
 
   stepContent: { gap: spacing.lg },
 
-  // Section card
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: radius.xl,
@@ -1056,10 +1097,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
   },
-  sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#0F172A' },
+  sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#0F172A' },
   sectionSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8', marginTop: -8 },
 
-  // Cover image
   coverZone: {
     borderRadius: radius.xl, overflow: 'hidden',
     backgroundColor: '#F8FAFC',
@@ -1083,22 +1123,28 @@ const styles = StyleSheet.create({
   },
   coverPlaceholderTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.primary },
   coverPlaceholderSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8' },
-  
-  // Images gallery
-  imagesGallery: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  galleryItem: {
-    width: '32%', aspectRatio: 1, borderRadius: radius.md, overflow: 'hidden',
+
+  galleryContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  arrowBtn: {
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0',
+    alignItems: 'center', justifyContent: 'center',
   },
-  galleryImage: { width: '100%', height: '100%' },
-  galleryRemoveBtn: {
-    position: 'absolute', top: 4, right: 4,
-    width: 24, height: 24, borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  galleryScroll: { flex: 1, height: 80 },
+  galleryThumbnail: {
+    width: 60, height: 60, borderRadius: radius.md, overflow: 'hidden',
+    backgroundColor: '#F8FAFC', borderWidth: 2, borderColor: '#E2E8F0',
+    marginRight: spacing.sm, position: 'relative',
+  },
+  galleryThumbnailActive: { borderColor: colors.primary, borderWidth: 3 },
+  galleryThumbImage: { width: '100%', height: '100%' },
+  galleryThumbRemoveBtn: {
+    position: 'absolute', top: -6, right: -6,
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: '#EF4444',
     alignItems: 'center', justifyContent: 'center',
   },
   imageBtnGroup: { flexDirection: 'row', gap: spacing.xs },
-  
   removeImgBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     flex: 1, justifyContent: 'center',
@@ -1108,7 +1154,6 @@ const styles = StyleSheet.create({
   },
   removeImgText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#2563EB' },
 
-  // Category chips
   fieldWrap: { gap: 0 },
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: 4 },
   catChip: {
@@ -1122,7 +1167,6 @@ const styles = StyleSheet.create({
 
   fieldError: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.error, marginTop: 4 },
 
-  // Schedule hints
   hintBox: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
     backgroundColor: '#EFF6FF', borderRadius: radius.md,
@@ -1143,10 +1187,7 @@ const styles = StyleSheet.create({
     paddingRight: spacing.md,
     overflow: 'hidden',
   },
-  pickerFieldError: {
-    borderColor: colors.error,
-    backgroundColor: '#FFF5F5',
-  },
+  pickerFieldError: { borderColor: colors.error, backgroundColor: '#FFF5F5' },
   pickerFieldIconWrap: {
     width: 48,
     alignSelf: 'stretch',
@@ -1155,10 +1196,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: '#E2E8F0',
   },
-  pickerFieldIconWrapError: {
-    borderRightColor: '#FECACA',
-    backgroundColor: '#FFF0F0',
-  },
+  pickerFieldIconWrapError: { borderRightColor: '#FECACA', backgroundColor: '#FFF0F0' },
   pickerFieldValue: {
     flex: 1,
     fontFamily: 'Inter_400Regular',
@@ -1166,9 +1204,7 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     paddingHorizontal: spacing.md,
   },
-  pickerFieldValueFilled: {
-    color: '#0F172A',
-  },
+  pickerFieldValueFilled: { color: '#0F172A' },
   pickerModalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(15,23,42,0.45)',
@@ -1197,23 +1233,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingTop: spacing.xs,
   },
-  pickerHeaderText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
-    color: '#334155',
-  },
-  pickerDoneBtn: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  pickerDoneText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
-    color: colors.primary,
-  },
-  pickerContainer: {
-    backgroundColor: '#FFFFFF',
-  },
+  pickerHeaderText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#334155' },
+  pickerDoneBtn: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  pickerDoneText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: colors.primary },
+  pickerContainer: { backgroundColor: '#FFFFFF' },
   datePreview: {
     backgroundColor: '#ECFDF5', borderRadius: radius.md,
     borderWidth: 1, borderColor: '#A7F3D0',
@@ -1222,7 +1245,6 @@ const styles = StyleSheet.create({
   datePreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   datePreviewText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#065F46', flex: 1 },
 
-  // Review step
   reviewCoverWrap: { borderRadius: radius.xl, overflow: 'hidden', height: 160 },
   reviewCover: { width: '100%', height: '100%' },
   reviewCoverLabel: {
@@ -1240,7 +1262,6 @@ const styles = StyleSheet.create({
   reviewGrid: { gap: 14 },
   reviewDesc: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#475569', lineHeight: 22 },
 
-  // Error card
   errorCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     backgroundColor: '#FEF2F2', borderRadius: radius.xl,
