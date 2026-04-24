@@ -80,7 +80,7 @@ export function EventListCard({
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
       onPress={onPress}
-      style={[styles.card, variant === 'featured' ? null : styles.compactCard]}
+      style={[styles.card, variant === 'featured' ? styles.featuredCardInner : styles.compactCard]}
     >
       {variant === 'featured' ? (
         <>
@@ -165,8 +165,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: 'hidden',
   },
+  featuredCardInner: {
+    height: '100%',
+  },
   featuredCard: {
     width: 292,
+    height: 320,
   },
   compactCard: {
     padding: spacing.md,
@@ -188,7 +192,9 @@ const styles = StyleSheet.create({
     width: 34,
   },
   featuredBody: {
+    flex: 1,
     gap: spacing.xs,
+    justifyContent: 'space-between',
     padding: spacing.lg,
   },
   featuredTitle: {
