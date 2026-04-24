@@ -753,7 +753,7 @@ export function EventForm({
                 <View style={styles.galleryContainer}>
                   {selectedImages.length > 1 && (
                     <Pressable style={styles.arrowBtn} onPress={scrollGalleryLeft} disabled={selectedImageIndex === 0}>
-                      <Ionicons name="chevron-back" size={24} color={selectedImageIndex === 0 ? '#CBD5E1' : '#0F172A'} />
+                      <Ionicons name="chevron-back" size={16} color={selectedImageIndex === 0 ? '#CBD5E1' : '#0F172A'} />
                     </Pressable>
                   )}
                   <ScrollView
@@ -762,32 +762,35 @@ export function EventForm({
                     showsHorizontalScrollIndicator={false}
                     scrollEventThrottle={16}
                     style={styles.galleryScroll}
+                    contentContainerStyle={styles.galleryScrollContent}
                   >
                     {selectedImages.map((img, idx) => (
-                      <Pressable
-                        key={`${idx}-${img.fileName}`}
-                        style={[styles.galleryThumbnail, idx === selectedImageIndex && styles.galleryThumbnailActive]}
-                        onPress={() => {
-                          setSelectedImageIndex(idx);
-                          galleryScrollRef.current?.scrollTo({
-                            x: idx * (60 + spacing.sm),
-                            animated: true,
-                          });
-                        }}
-                      >
-                        <Image contentFit="cover" source={{ uri: img.uri }} style={styles.galleryThumbImage} transition={150} />
+                      <View key={`${idx}-${img.fileName}`} style={styles.galleryThumbWrap}>
+                        <Pressable
+                          style={[styles.galleryThumbnail, idx === selectedImageIndex && styles.galleryThumbnailActive]}
+                          onPress={() => {
+                            setSelectedImageIndex(idx);
+                            galleryScrollRef.current?.scrollTo({
+                              x: idx * (60 + spacing.sm),
+                              animated: true,
+                            });
+                          }}
+                        >
+                          <Image contentFit="cover" source={{ uri: img.uri }} style={styles.galleryThumbImage} transition={150} />
+                        </Pressable>
                         <Pressable
                           style={styles.galleryThumbRemoveBtn}
                           onPress={() => handleRemoveImage(idx)}
+                          hitSlop={6}
                         >
-                          <Ionicons name="close" size={14} color="#fff" />
+                          <Ionicons name="close" size={10} color="#fff" />
                         </Pressable>
-                      </Pressable>
+                      </View>
                     ))}
                   </ScrollView>
                   {selectedImages.length > 1 && (
                     <Pressable style={styles.arrowBtn} onPress={scrollGalleryRight} disabled={selectedImageIndex === selectedImages.length - 1}>
-                      <Ionicons name="chevron-forward" size={24} color={selectedImageIndex === selectedImages.length - 1 ? '#CBD5E1' : '#0F172A'} />
+                      <Ionicons name="chevron-forward" size={16} color={selectedImageIndex === selectedImages.length - 1 ? '#CBD5E1' : '#0F172A'} />
                     </Pressable>
                   )}
                 </View>
@@ -1062,9 +1065,8 @@ const styles = StyleSheet.create({
   progress: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.xxs,
+    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.xxs,
-    borderTopWidth: 0,
   },
   progressItem: { flex: 1, alignItems: 'center', position: 'relative' },
   progressDot: {
@@ -1124,25 +1126,34 @@ const styles = StyleSheet.create({
   coverPlaceholderTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.primary },
   coverPlaceholderSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8' },
 
-  galleryContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  galleryContainer: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingBottom: 10,
+  },
   arrowBtn: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 28, height: 28, borderRadius: 14,
     backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0',
     alignItems: 'center', justifyContent: 'center',
+    marginTop: 10,
   },
-  galleryScroll: { flex: 1, height: 80 },
+  galleryScroll: { flex: 1, height: 70 },
+  galleryScrollContent: { alignItems: 'flex-end' },
+  galleryThumbWrap: {
+    width: 60, marginRight: spacing.sm,
+    position: 'relative',
+  },
   galleryThumbnail: {
-    width: 60, height: 60, borderRadius: radius.md, overflow: 'hidden',
+    width: 60, height: 60, borderRadius: radius.md,
+    overflow: 'hidden',
     backgroundColor: '#F8FAFC', borderWidth: 2, borderColor: '#E2E8F0',
-    marginRight: spacing.sm, position: 'relative',
   },
   galleryThumbnailActive: { borderColor: colors.primary, borderWidth: 3 },
   galleryThumbImage: { width: '100%', height: '100%' },
   galleryThumbRemoveBtn: {
-    position: 'absolute', top: -6, right: -6,
-    width: 22, height: 22, borderRadius: 11,
+    position: 'absolute', top: -4, right: -4,
+    width: 24, height: 24, borderRadius: 12,
     backgroundColor: '#EF4444',
     alignItems: 'center', justifyContent: 'center',
+    zIndex: 10,
   },
   imageBtnGroup: { flexDirection: 'row', gap: spacing.xs },
   removeImgBtn: {
