@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   },
   featuredCard: {
     width: 292,
-    height: 320,
+    height: 340,
   },
   compactCard: {
     padding: spacing.md,
@@ -194,7 +194,6 @@ const styles = StyleSheet.create({
   featuredBody: {
     flex: 1,
     gap: spacing.xs,
-    justifyContent: 'space-between',
     padding: spacing.lg,
   },
   featuredTitle: {
@@ -215,7 +214,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: spacing.sm,
+    marginTop: 'auto',
   },
   joinButton: {
     backgroundColor: colors.primary,
