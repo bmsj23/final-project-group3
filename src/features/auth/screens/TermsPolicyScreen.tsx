@@ -144,15 +144,11 @@ export function TermsPolicyScreen({ navigation, route }: TermsPolicyScreenProps)
     <SafeAreaView style={styles.root} edges={[]}>
       <StatusBar style="light" />
       <LinearGradient
-        colors={['#020617', '#08152E', '#0B1F46', '#153A75']}
+        colors={['#0B1733', '#12305D', '#1D4E89', '#3B82C4']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-
-      <View style={styles.blobTop} pointerEvents="none" />
-      <View style={styles.blobRight} pointerEvents="none" />
-      <View style={styles.blobBottom} pointerEvents="none" />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
@@ -168,7 +164,7 @@ export function TermsPolicyScreen({ navigation, route }: TermsPolicyScreenProps)
           <View style={styles.headerGhost} />
         </View>
 
-        <View style={styles.heroCard}>
+        <View style={styles.heroBlock}>
           <View style={styles.heroBadge}>
             <Ionicons
               name={section === 'terms' ? 'document-text-outline' : 'shield-checkmark-outline'}
@@ -206,30 +202,57 @@ export function TermsPolicyScreen({ navigation, route }: TermsPolicyScreenProps)
           </View>
         </View>
 
-        <View style={styles.highlightsRow}>
+        <View style={styles.quickRead}>
+          <Text style={styles.quickReadLabel}>Quick read</Text>
           {HIGHLIGHTS[section].map((item) => (
-            <View key={item.title} style={styles.highlightCard}>
+            <View key={item.title} style={styles.highlightRow}>
               <View style={styles.highlightIcon}>
                 <Ionicons name={item.icon} size={18} color="#60A5FA" />
               </View>
-              <Text style={styles.highlightTitle}>{item.title}</Text>
-              <Text style={styles.highlightText}>{item.text}</Text>
+              <View style={styles.highlightCopy}>
+                <Text style={styles.highlightTitle}>{item.title}</Text>
+                <Text style={styles.highlightText}>{item.text}</Text>
+              </View>
             </View>
           ))}
         </View>
 
-        <View style={styles.contentCard}>
-          {CONTENT[section].map((item) => (
-            <View key={item.title} style={styles.sectionBlock}>
-              <Text style={styles.sectionTitle}>{item.title}</Text>
-              <Text style={styles.sectionBody}>{item.body}</Text>
-            </View>
-          ))}
-        </View>
+        <View style={styles.sheet}>
+          <View style={styles.sheetTop}>
+            <Text style={styles.sheetTitle}>{section === 'terms' ? 'What this means for you' : 'How your information is handled'}</Text>
+            <Text style={styles.sheetIntro}>
+              {section === 'terms'
+                ? 'These points explain the rules for using the platform, publishing events, and protecting accounts.'
+                : 'These points explain what information is collected, why it is used, and what choices you have.'}
+            </Text>
+          </View>
 
-        <View style={styles.contactCard}>
-          <Text style={styles.contactTitle}>{CONTACT_COPY.title}</Text>
-          <Text style={styles.contactText}>{CONTACT_COPY.text}</Text>
+          <View style={styles.sectionsList}>
+            {CONTENT[section].map((item, index) => (
+              <View key={item.title} style={styles.sectionRow}>
+                <View style={styles.sectionMarkerWrap}>
+                  <View style={styles.sectionMarker}>
+                    <Text style={styles.sectionMarkerText}>{index + 1}</Text>
+                  </View>
+                  {index !== CONTENT[section].length - 1 ? <View style={styles.sectionLine} /> : null}
+                </View>
+                <View style={styles.sectionContent}>
+                  <Text style={styles.sectionTitle}>{item.title}</Text>
+                  <Text style={styles.sectionBody}>{item.body}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.contactStrip}>
+            <View style={styles.contactIcon}>
+              <Ionicons name="help-buoy-outline" size={18} color="#2563EB" />
+            </View>
+            <View style={styles.contactCopy}>
+              <Text style={styles.contactTitle}>{CONTACT_COPY.title}</Text>
+              <Text style={styles.contactText}>{CONTACT_COPY.text}</Text>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -238,36 +261,6 @@ export function TermsPolicyScreen({ navigation, route }: TermsPolicyScreenProps)
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#020617' },
-  blobTop: {
-    position: 'absolute',
-    top: -60,
-    left: -60,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#1D4ED8',
-    opacity: 0.22,
-  },
-  blobRight: {
-    position: 'absolute',
-    top: 120,
-    right: -80,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: '#38BDF8',
-    opacity: 0.12,
-  },
-  blobBottom: {
-    position: 'absolute',
-    top: '38%',
-    left: '30%',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: '#1E3A8A',
-    opacity: 0.1,
-  },
   scroll: {
     paddingTop: 52,
     paddingHorizontal: spacing.xl,
@@ -288,18 +281,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     textAlign: 'center',
-    color: '#EFF6FF',
+    color: '#F8FAFC',
     fontFamily: 'Inter_700Bold',
     fontSize: 18,
     letterSpacing: -0.3,
   },
   headerGhost: { width: 40 },
-  heroCard: {
-    backgroundColor: 'rgba(8,21,46,0.72)',
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(96,165,250,0.2)',
-    padding: spacing.xl,
+  heroBlock: {
     gap: spacing.md,
   },
   heroBadge: {
@@ -321,29 +309,29 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 28,
-    lineHeight: 34,
-    color: '#F8FAFC',
+    fontSize: 34,
+    lineHeight: 40,
+    color: '#FFFFFF',
     letterSpacing: -0.8,
   },
   heroSubtitle: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 14,
-    lineHeight: 22,
-    color: '#CBD5E1',
+    fontSize: 15,
+    lineHeight: 23,
+    color: '#E2E8F0',
   },
   tabRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
   },
   tabBtn: {
     flex: 1,
     minHeight: 46,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.22)',
-    backgroundColor: 'rgba(15,23,42,0.34)',
+    borderColor: 'rgba(191,219,254,0.22)',
+    backgroundColor: 'rgba(15,23,42,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
@@ -360,48 +348,115 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: '#1E3A8A',
   },
-  highlightsRow: {
-    gap: spacing.md,
-  },
-  highlightCard: {
-    backgroundColor: '#FFFFFF',
+  quickRead: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(191,219,254,0.2)',
     padding: spacing.lg,
+    gap: spacing.md,
+  },
+  quickReadLabel: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 13,
+    color: '#DBEAFE',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  highlightRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
   },
   highlightIcon: {
     width: 40,
     height: 40,
     borderRadius: 14,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(239,246,255,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
+    marginTop: 2,
   },
+  highlightCopy: { flex: 1 },
   highlightTitle: {
     fontFamily: 'Inter_700Bold',
     fontSize: 15,
-    color: '#0F172A',
-    marginBottom: 6,
+    color: '#FFFFFF',
+    marginBottom: 4,
   },
   highlightText: {
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 20,
-    color: '#475569',
+    color: '#E2E8F0',
   },
-  contentCard: {
+  sheet: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 28,
+    borderRadius: 30,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
     gap: spacing.lg,
   },
-  sectionBlock: {
-    gap: 8,
+  sheetTop: {
+    gap: 6,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  sheetTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 22,
+    color: '#0F172A',
+    letterSpacing: -0.5,
+  },
+  sheetIntro: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#64748B',
+  },
+  sectionsList: {
+    gap: spacing.sm,
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing.md,
+  },
+  sectionMarkerWrap: {
+    alignItems: 'center',
+    width: 28,
+  },
+  sectionMarker: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionMarkerText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 12,
+    color: '#1D4ED8',
+  },
+  sectionLine: {
+    flex: 1,
+    width: 1,
+    backgroundColor: '#DBEAFE',
+    marginTop: 8,
+    marginBottom: -8,
+  },
+  sectionContent: {
+    flex: 1,
+    paddingBottom: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   sectionTitle: {
     fontFamily: 'Inter_700Bold',
@@ -414,14 +469,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: '#475569',
+    marginTop: 6,
   },
-  contactCard: {
-    backgroundColor: 'rgba(239,246,255,0.96)',
-    borderRadius: 24,
+  contactStrip: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    backgroundColor: '#F8FBFF',
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#BFDBFE',
     padding: spacing.lg,
-    gap: 6,
+  },
+  contactIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contactCopy: {
+    flex: 1,
   },
   contactTitle: {
     fontFamily: 'Inter_700Bold',
@@ -433,6 +502,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     color: '#334155',
+    marginTop: 4,
   },
   pressed: { opacity: 0.8 },
 });

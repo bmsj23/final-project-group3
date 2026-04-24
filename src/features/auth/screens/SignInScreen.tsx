@@ -27,20 +27,6 @@ import { isValidEmail } from '../validation';
 
 type SignInScreenProps = NativeStackScreenProps<AuthStackParamList, 'SignIn'>;
 
-const VIBE_TAGS = [
-  { label: 'music', color: '#93C5FD', bg: 'rgba(59,130,246,0.16)', rotate: '-7deg', top: '35%', right: '9%' },
-  { label: 'live now', color: '#7DD3FC', bg: 'rgba(14,165,233,0.12)', rotate: '4deg', top: '7%', right: '3%' },
-  { label: 'free entry', color: '#C4B5FD', bg: 'rgba(99,102,241,0.14)', rotate: '-4deg', top: '26%', right: '6%' },
-  { label: 'trending', color: '#BFDBFE', bg: 'rgba(96,165,250,0.12)', rotate: '6deg', top: '35%', left: '3%' },
-  { label: 'near you', color: '#60A5FA', bg: 'rgba(37,99,235,0.14)', rotate: '-5deg', top: '15%', right: '4%' },
-];
-
-const STATS = [
-  { value: '240+', label: 'events' },
-  { value: '5k+', label: 'people' },
-  { value: '24/7', label: 'active' },
-];
-
 export function SignInScreen({ navigation }: SignInScreenProps) {
   const { clearError, errorMessage, signIn } = useAppSession();
   const [values, setValues] = useState<SignInFormValues>({ email: '', password: '' });
@@ -54,7 +40,6 @@ export function SignInScreen({ navigation }: SignInScreenProps) {
   const sheetY = useRef(new Animated.Value(80)).current;
   const sheetOp = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
-  const tagAnims = Array.from({ length: 5 }, () => useRef(new Animated.Value(0)).current);
 
   useEffect(() => {
     Animated.sequence([
@@ -62,18 +47,12 @@ export function SignInScreen({ navigation }: SignInScreenProps) {
         Animated.timing(fadeIn, { toValue: 1, duration: 500, useNativeDriver: true }),
         Animated.timing(slideUp, { toValue: 0, duration: 500, useNativeDriver: true }),
       ]),
-      Animated.stagger(
-        80,
-        tagAnims.map((anim) =>
-          Animated.spring(anim, { toValue: 1, useNativeDriver: true, tension: 80, friction: 8 }),
-        ),
-      ),
       Animated.parallel([
         Animated.timing(sheetOp, { toValue: 1, duration: 400, useNativeDriver: true }),
         Animated.spring(sheetY, { toValue: 0, useNativeDriver: true, tension: 60, friction: 10 }),
       ]),
     ]).start();
-  }, [fadeIn, slideUp, sheetOp, sheetY, tagAnims]);
+  }, [fadeIn, slideUp, sheetOp, sheetY]);
 
   function triggerShake() {
     shakeAnim.setValue(0);
@@ -145,36 +124,11 @@ export function SignInScreen({ navigation }: SignInScreenProps) {
   return (
     <SafeAreaView style={styles.root} edges={[]}>
       <LinearGradient
-        colors={['#020617', '#08152E', '#0B1F46', '#153A75']}
+        colors={['#0B1733', '#12305D', '#1D4E89', '#3B82C4']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-
-      <View style={styles.blobTop} pointerEvents="none" />
-      <View style={styles.blobRight} pointerEvents="none" />
-      <View style={styles.blobBottom} pointerEvents="none" />
-
-      {VIBE_TAGS.map((tag, index) => (
-        <Animated.View
-          key={tag.label}
-          pointerEvents="none"
-          style={[
-            styles.floatingTag,
-            {
-              backgroundColor: tag.bg,
-              borderColor: `${tag.color}55`,
-              top: tag.top as never,
-              ...(tag.left ? { left: tag.left as never } : {}),
-              ...(tag.right ? { right: tag.right as never } : {}),
-              transform: [{ rotate: tag.rotate as never }, { scale: tagAnims[index] }],
-              opacity: tagAnims[index],
-            },
-          ]}
-        >
-          <Text style={[styles.floatingTagText, { color: tag.color }]}>{tag.label}</Text>
-        </Animated.View>
-      ))}
 
       <KeyboardAvoidingView
         style={styles.kav}
@@ -197,20 +151,10 @@ export function SignInScreen({ navigation }: SignInScreenProps) {
               <View style={styles.h2Row}>
                 <View style={styles.strokeWrap}>
                   <Text style={[styles.h2StrokeBase, styles.h2StrokeOutline]}>BACK</Text>
-                  <Text style={[styles.h2StrokeBase, styles.h2StrokeFill]}>BACK</Text>
                 </View>
                 <Text style={styles.h2Solid}> IN</Text>
               </View>
               <Text style={styles.h3Accent}>sign in mode</Text>
-            </View>
-
-            <View style={styles.statsRow}>
-              {STATS.map((stat) => (
-                <View key={stat.label} style={styles.statCard}>
-                  <Text style={styles.statValue}>{stat.value}</Text>
-                  <Text style={styles.statLabel}>{stat.label}</Text>
-                </View>
-              ))}
             </View>
           </Animated.View>
 
@@ -337,12 +281,7 @@ export function SignInScreen({ navigation }: SignInScreenProps) {
                 ]}
                 onPress={() => void handleSubmit()}
               >
-                <LinearGradient
-                  colors={['#1E3A8A', '#1D4ED8', '#3B82F6']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.btnGradient}
-                >
+                <View style={styles.btnFill}>
                   {isSubmitting ? (
                     <>
                       <View style={styles.dotsRow}>
@@ -360,7 +299,7 @@ export function SignInScreen({ navigation }: SignInScreenProps) {
                       </View>
                     </>
                   )}
-                </LinearGradient>
+                </View>
               </Pressable>
 
               <View style={styles.orRow}>
@@ -389,56 +328,14 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#020617' },
   kav: { flex: 1 },
   layout: { flex: 1, justifyContent: 'flex-end' },
-  blobTop: {
-    position: 'absolute',
-    top: -60,
-    left: -60,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#1D4ED8',
-    opacity: 0.22,
-  },
-  blobRight: {
-    position: 'absolute',
-    top: 120,
-    right: -80,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: '#38BDF8',
-    opacity: 0.12,
-  },
-  blobBottom: {
-    position: 'absolute',
-    top: '38%',
-    left: '30%',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: '#1E3A8A',
-    opacity: 0.1,
-  },
-  floatingTag: {
-    position: 'absolute',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.full,
-    borderWidth: 1,
-  },
-  floatingTagText: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 11,
-    letterSpacing: 0.3,
-  },
   hero: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    paddingTop: 52,
+    paddingTop: 64,
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.xl,
   },
   backBtn: {
     position: 'absolute',
@@ -454,25 +351,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 10,
   },
-  headlineBlock: { marginTop: 56, gap: 0 },
+  headlineBlock: { marginTop: 70, gap: 6 },
   h1: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 52,
-    lineHeight: 54,
-    color: '#EFF6FF',
-    letterSpacing: -2,
+    fontSize: 58,
+    lineHeight: 60,
+    color: '#FFFFFF',
+    letterSpacing: -2.4,
   },
   h2Row: { flexDirection: 'row', alignItems: 'baseline' },
   strokeWrap: { position: 'relative' },
   h2StrokeBase: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 52,
-    lineHeight: 58,
-    letterSpacing: -2,
+    fontSize: 58,
+    lineHeight: 64,
+    letterSpacing: -2.4,
   },
   h2StrokeOutline: {
-    color: '#60A5FA',
-    textShadowColor: '#60A5FA',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(255,255,255,0.18)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 4,
   },
@@ -484,49 +381,25 @@ const styles = StyleSheet.create({
   },
   h2Solid: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 52,
-    lineHeight: 58,
-    color: '#EFF6FF',
-    letterSpacing: -2,
+    fontSize: 58,
+    lineHeight: 64,
+    color: '#FFFFFF',
+    letterSpacing: -2.4,
   },
   h3Accent: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 28,
-    lineHeight: 36,
-    color: '#93C5FD',
-    letterSpacing: -0.5,
-    marginTop: 2,
-  },
-  statsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl },
-  statCard: {
-    flex: 1,
-    borderRadius: 20,
-    backgroundColor: 'rgba(8,21,46,0.52)',
-    borderWidth: 1,
-    borderColor: 'rgba(96,165,250,0.16)',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-  },
-  statValue: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 22,
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
-  statLabel: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 11,
-    color: '#93C5FD',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    marginTop: 1,
+    fontSize: 30,
+    lineHeight: 38,
+    color: '#BFDBFE',
+    letterSpacing: -0.7,
+    marginTop: 8,
   },
   sheet: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingTop: 12,
-    maxHeight: '74%',
+    maxHeight: '78%',
     borderTopWidth: 1,
     borderColor: 'rgba(96,165,250,0.18)',
     shadowColor: '#1D4ED8',
@@ -556,13 +429,13 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 20,
+    fontSize: 22,
     color: '#0F172A',
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
   },
   sheetSub: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 13,
+    fontSize: 14,
     color: '#64748B',
     marginTop: 2,
   },
@@ -587,7 +460,7 @@ const styles = StyleSheet.create({
   fieldWrap: { gap: 7 },
   fieldLabel: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+    fontSize: 14,
     color: '#334155',
     letterSpacing: 0.1,
   },
@@ -615,7 +488,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontFamily: 'Inter_400Regular',
-    fontSize: 15,
+    fontSize: 16,
     color: '#0F172A',
     paddingHorizontal: spacing.md,
     minHeight: 54,
@@ -662,17 +535,18 @@ const styles = StyleSheet.create({
   rememberText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#64748B' },
   forgotText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#60A5FA' },
   btnPrimary: { borderRadius: radius.md, overflow: 'hidden' },
-  btnGradient: {
+  btnFill: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 56,
     gap: spacing.sm,
     paddingHorizontal: spacing.xl,
+    backgroundColor: '#2563EB',
   },
   btnLabel: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 16,
+    fontSize: 17,
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
