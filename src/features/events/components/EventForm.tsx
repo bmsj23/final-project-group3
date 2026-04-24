@@ -80,7 +80,7 @@ function FieldLabel({ text, required }: { text: string; required?: boolean }) {
 const fl = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   label: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#334155' },
-  required: { fontFamily: 'Inter_700Bold', fontSize: 13, color: colors.primary },
+  required: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#EF4444' },
 });
 
 // ─── Custom text field ────────────────────────────────────────────────────────
@@ -416,7 +416,7 @@ export function EventForm({
   const [deadlineInput, setDeadlineInput] = useState(formatDateTimeInput(initialValues.registrationDeadline));
   const [tagsInput, setTagsInput] = useState(tagsToInput(initialValues.tags));
   const [errors, setErrors] = useState<EventFormErrors>({});
-  const [selectedImage, setSelectedImage] = useState<EventImageAsset | null>(null);
+  const [selectedImages, setSelectedImages] = useState<EventImageAsset[]>([]);
   const [removeExisting, setRemoveExisting] = useState(false);
   const [step, setStep] = useState(0);
   const [activePicker, setActivePicker] = useState<PickerTarget | null>(null);
@@ -439,7 +439,7 @@ export function EventForm({
     setDeadlineInput(formatDateTimeInput(initialValues.registrationDeadline));
     setTagsInput(tagsToInput(initialValues.tags));
     setErrors({});
-    setSelectedImage(null);
+    setSelectedImages([]);
     setRemoveExisting(false);
     setStep(0);
     setActivePicker(null);
@@ -461,7 +461,7 @@ export function EventForm({
       dateTimeInput !== initialDateTimeInput ||
       deadlineInput !== initialDeadlineInput ||
       tagsInput !== initialTagsInput ||
-      Boolean(selectedImage) ||
+      selectedImages.length > 0 ||
       removeExisting ||
       step > 0;
 
@@ -473,13 +473,13 @@ export function EventForm({
     initialValues,
     onDirtyChange,
     removeExisting,
-    selectedImage,
+    selectedImages,
     step,
     tagsInput,
     values,
   ]);
 
-  const previewUri = selectedImage?.uri ?? (removeExisting ? null : initialValues.coverImageUrl ?? null);
+  const previewUri = selectedImages.length > 0 ? selectedImages[0].uri : (removeExisting ? null : initialValues.coverImageUrl ?? null);
 
   function updateValue<K extends keyof EventFormValues>(key: K, val: EventFormValues[K]) {
     setValues(p => ({ ...p, [key]: val }));
@@ -491,13 +491,21 @@ export function EventForm({
     const { data, error } = await pickEventImageAsset();
     if (error) { setErrors(p => ({ ...p, coverImageUrl: error.message })); return; }
     if (!data) return;
-    setSelectedImage(data);
+    setSelectedImages(prev => [...prev, ...(Array.isArray(data) ? data : [data])]);
     setRemoveExisting(false);
   }
 
-  function handleRemoveImage() {
-    if (selectedImage) { setSelectedImage(null); return; }
+  function handleRemoveImage(index: number) {
+    if (selectedImages.length > 0) {
+      setSelectedImages(selectedImages.filter((_, i) => i !== index));
+      return;
+    }
     if (initialValues.coverImageUrl) setRemoveExisting(v => !v);
+  }
+
+  function handleClearAll() {
+    setSelectedImages([]);
+    setRemoveExisting(true);
   }
 
   function getPickerValue(target: PickerTarget) {
@@ -576,9 +584,9 @@ export function EventForm({
     }
     await onSubmit({
       values: nextValues,
-      selectedImage,
+      selectedImage: selectedImages.length > 0 ? selectedImages[0] : null,
       originalCoverImageUrl: initialValues.coverImageUrl ?? null,
-      coverImageChanged: Boolean(selectedImage) || removeExisting,
+      coverImageChanged: selectedImages.length > 0 || removeExisting,
     });
   }
 
@@ -642,7 +650,7 @@ export function EventForm({
                       today: { borderWidth: 1.5, borderColor: '#2563EB', borderRadius: 20 },
                       today_label: { fontFamily: 'Inter_700Bold', color: '#2563EB' },
                       disabled: { opacity: 0.3 },
-                      disabled_label: { color: '#CBD5E1' },
+                      disabled_label: { color: '#505459' },
                     }}
                   />
                 ) : (
@@ -694,7 +702,7 @@ export function EventForm({
 
             {/* Cover image */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Cover Image</Text>
+              <Text style={styles.sectionTitle}>Cover Images</Text>
               <Text style={styles.sectionSub}>Optional — adds visual appeal in the event feed</Text>
 
               <Pressable
@@ -707,7 +715,7 @@ export function EventForm({
                     <Image contentFit="cover" source={{ uri: previewUri }} style={styles.coverImg} transition={150} />
                     <View style={styles.coverOverlay}>
                       <Ionicons name="camera" size={20} color="#fff" />
-                      <Text style={styles.coverOverlayText}>Change Photo</Text>
+                      <Text style={styles.coverOverlayText}>Add More Photos</Text>
                     </View>
                   </>
                 ) : (
@@ -715,19 +723,42 @@ export function EventForm({
                     <View style={styles.coverPlaceholderIcon}>
                       <Ionicons name="image-outline" size={28} color={colors.primary} />
                     </View>
-                    <Text style={styles.coverPlaceholderTitle}>Add Cover Photo</Text>
-                    <Text style={styles.coverPlaceholderSub}>JPG, PNG, WEBP · up to {EVENT_IMAGE_MAX_SIZE_LABEL}</Text>
+                    <Text style={styles.coverPlaceholderTitle}>Add Cover Photos</Text>
+                    <Text style={styles.coverPlaceholderSub}>JPG, PNG, WEBP · up to {EVENT_IMAGE_MAX_SIZE_LABEL} each</Text>
                   </View>
                 )}
               </Pressable>
 
-              {previewUri && (
-                <Pressable style={styles.removeImgBtn} onPress={handleRemoveImage}>
-                  <Ionicons name="trash-outline" size={14} color="#EF4444" />
-                  <Text style={styles.removeImgText}>
-                    {selectedImage ? 'Undo change' : removeExisting ? 'Restore image' : 'Remove image'}
-                  </Text>
-                </Pressable>
+              {/* Images gallery */}
+              {selectedImages.length > 0 && (
+                <View style={styles.imagesGallery}>
+                  {selectedImages.map((img, idx) => (
+                    <View key={`${idx}-${img.fileName}`} style={styles.galleryItem}>
+                      <Image contentFit="cover" source={{ uri: img.uri }} style={styles.galleryImage} transition={150} />
+                      <Pressable
+                        style={styles.galleryRemoveBtn}
+                        onPress={() => handleRemoveImage(idx)}
+                      >
+                        <Ionicons name="close" size={16} color="#fff" />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {(previewUri || selectedImages.length > 0) && (
+                <View style={styles.imageBtnGroup}>
+                  <Pressable style={styles.removeImgBtn} onPress={() => void handlePickImage()}>
+                    <Ionicons name="add-circle-outline" size={14} color="#2563EB" />
+                    <Text style={styles.removeImgText} numberOfLines={1}>Add Photos</Text>
+                  </Pressable>
+                  {selectedImages.length > 0 && (
+                    <Pressable style={styles.removeImgBtn} onPress={handleClearAll}>
+                      <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                      <Text style={[styles.removeImgText, { color: '#EF4444' }]}>Clear All</Text>
+                    </Pressable>
+                  )}
+                </View>
               )}
               {errors.coverImageUrl ? <Text style={styles.fieldError}>{errors.coverImageUrl}</Text> : null}
             </View>
@@ -990,7 +1021,7 @@ const styles = StyleSheet.create({
   progress: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.xs,
   },
   progressItem: { flex: 1, alignItems: 'center', position: 'relative' },
@@ -1007,7 +1038,7 @@ const styles = StyleSheet.create({
   progressLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: '#94A3B8', textAlign: 'center' },
   progressLabelActive: { fontFamily: 'Inter_600SemiBold', color: colors.primary },
   progressLine: {
-    position: 'absolute', top: 17, left: '62%', right: '-38%',
+    position: 'absolute', top: 17, left: '66.5%', right: '-33.5%',
     height: 2, backgroundColor: '#E2E8F0',
   },
   progressLineDone: { backgroundColor: '#10B981' },
@@ -1052,14 +1083,30 @@ const styles = StyleSheet.create({
   },
   coverPlaceholderTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.primary },
   coverPlaceholderSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8' },
+  
+  // Images gallery
+  imagesGallery: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  galleryItem: {
+    width: '32%', aspectRatio: 1, borderRadius: radius.md, overflow: 'hidden',
+    backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0',
+  },
+  galleryImage: { width: '100%', height: '100%' },
+  galleryRemoveBtn: {
+    position: 'absolute', top: 4, right: 4,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  imageBtnGroup: { flexDirection: 'row', gap: spacing.xs },
+  
   removeImgBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'center',
-    backgroundColor: '#FFF5F5', borderRadius: radius.full,
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderWidth: 1, borderColor: '#FECACA',
+    flex: 1, justifyContent: 'center',
+    backgroundColor: '#F8FAFC', borderRadius: radius.md,
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderWidth: 1, borderColor: '#E2E8F0',
   },
-  removeImgText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#EF4444' },
+  removeImgText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#2563EB' },
 
   // Category chips
   fieldWrap: { gap: 0 },
