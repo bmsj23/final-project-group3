@@ -44,6 +44,8 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const hasFetched = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
+  const bodyY = useRef(0);
+  const categoriesY = useRef(0);
 
   const loadFeed = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -145,7 +147,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               }
             />
 
-            <View style={styles.body}>
+            <View style={styles.body} onLayout={(e) => { bodyY.current = e.nativeEvent.layout.y; }}>
               {errorMessage ? (
                 <EmptyStateCard
                   body={errorMessage}
@@ -215,11 +217,13 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                     </View>
                   </ScrollView>
 
-                  <SectionHeader
-                    actionLabel="VIEW ALL"
-                    onPressAction={() => navigation.navigate('Explore')}
-                    title="Browse Categories"
-                  />
+                  <View onLayout={(e) => { categoriesY.current = e.nativeEvent.layout.y; }}>
+                    <SectionHeader
+                      actionLabel="VIEW ALL"
+                      onPressAction={() => navigation.navigate('Explore')}
+                      title="Browse Categories"
+                    />
+                  </View>
 
                   <ScrollView
                     alwaysBounceHorizontal={false}
@@ -235,7 +239,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                         label="All"
                         onPress={() => {
                           setSelectedCategoryId(null);
-                          scrollRef.current?.scrollTo({ y: 0, animated: true });
+                          scrollRef.current?.scrollTo({ y: bodyY.current + categoriesY.current, animated: true });
                         }}
                         selected={selectedCategoryId === null}
                       />
@@ -245,7 +249,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                           label={category.name}
                           onPress={() => {
                             setSelectedCategoryId(prev => prev === category.id ? null : category.id);
-                            scrollRef.current?.scrollTo({ y: 0, animated: true });
+                            scrollRef.current?.scrollTo({ y: bodyY.current + categoriesY.current, animated: true });
                           }}
                           selected={selectedCategoryId === category.id}
                         />
@@ -253,16 +257,24 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                     </View>
                   </ScrollView>
 
-                  <View style={styles.list}>
-                    {listEvents.map((event) => (
-                      <EventListCard
-                        key={event.id}
-                        categoryName={categoryNameById.get(event.categoryId)}
-                        event={event}
-                        onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
-                      />
-                    ))}
-                  </View>
+                  {listEvents.length === 0 && selectedCategoryId !== null ? (
+                    <EmptyStateCard
+                      body="No events found in this category yet. Check back later."
+                      icon="calendar-outline"
+                      title="No events here"
+                    />
+                  ) : (
+                    <View style={styles.list}>
+                      {listEvents.map((event) => (
+                        <EventListCard
+                          key={event.id}
+                          categoryName={categoryNameById.get(event.categoryId)}
+                          event={event}
+                          onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
+                        />
+                      ))}
+                    </View>
+                  )}
                 </>
               )}
             </View>
