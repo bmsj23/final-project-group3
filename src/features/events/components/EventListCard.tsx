@@ -98,16 +98,18 @@ export function EventListCard({
             />
           </Pressable>
           <View style={styles.featuredBody}>
-            <Text numberOfLines={2} style={styles.featuredTitle}>
-              {event.title}
-            </Text>
-            <View style={styles.metaRow}>
-              <Ionicons color={colors.textMuted} name="calendar-outline" size={12} />
-              <Text style={styles.meta}>{formatEventDateTime(event.startsAt)}</Text>
-            </View>
-            <View style={styles.metaRow}>
-              <Ionicons color={colors.textMuted} name="location-outline" size={12} />
-              <Text numberOfLines={1} style={styles.meta}>{event.location}</Text>
+            <View style={styles.featuredTop}>
+              <Text numberOfLines={2} style={styles.featuredTitle}>
+                {event.title}
+              </Text>
+              <View style={styles.metaRow}>
+                <Ionicons color={colors.textMuted} name="calendar-outline" size={12} />
+                <Text style={styles.meta}>{formatEventDateTime(event.startsAt)}</Text>
+              </View>
+              <View style={styles.metaRow}>
+                <Ionicons color={colors.textMuted} name="location-outline" size={12} />
+                <Text numberOfLines={1} style={styles.meta}>{event.location}</Text>
+              </View>
             </View>
             <View style={styles.featuredFooter}>
               <MemberAvatarStack joined={joinedCount} />
@@ -193,8 +195,11 @@ const styles = StyleSheet.create({
   },
   featuredBody: {
     flex: 1,
-    gap: spacing.xs,
+    justifyContent: 'space-between',
     padding: spacing.lg,
+  },
+  featuredTop: {
+    gap: spacing.xs,
   },
   featuredTitle: {
     ...typography.h5,
@@ -214,7 +219,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 'auto',
   },
   joinButton: {
     backgroundColor: colors.primary,
