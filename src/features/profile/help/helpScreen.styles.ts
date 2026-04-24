@@ -1,0 +1,201 @@
+import { StyleSheet } from 'react-native';
+
+import { spacing } from '../../../theme/spacing';
+
+export const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#F4F8FC',
+  },
+  scroll: {
+    flexGrow: 1,
+    paddingTop: 18,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 32,
+    gap: spacing.lg,
+  },
+  pressed: {
+    opacity: 0.82,
+  },
+  header: {
+    gap: spacing.md,
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D9E5F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eyebrow: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: '#2563EB',
+  },
+  title: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 30,
+    color: '#0F172A',
+    letterSpacing: -0.8,
+  },
+  subtitle: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#64748B',
+    maxWidth: '94%',
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: '#D9E5F0',
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  cardTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 18,
+    color: '#0F172A',
+    letterSpacing: -0.3,
+  },
+  cardDescription: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#64748B',
+  },
+  actionList: {
+    gap: 12,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: '#F8FBFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: spacing.md,
+  },
+  actionIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    backgroundColor: '#E8F1FB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  actionTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  actionText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#64748B',
+  },
+  actionCta: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 12,
+    color: '#2563EB',
+    marginTop: 2,
+  },
+  shortcutGrid: {
+    gap: 12,
+  },
+  shortcutCard: {
+    backgroundColor: '#F8FBFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: spacing.md,
+    gap: 10,
+  },
+  shortcutIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#E8F1FB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shortcutTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  shortcutText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#64748B',
+  },
+  faqList: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+  faqItem: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 16,
+    gap: 10,
+  },
+  faqItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  faqPressed: {
+    backgroundColor: '#F8FBFF',
+  },
+  faqHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  faqQuestion: {
+    flex: 1,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    color: '#0F172A',
+    lineHeight: 20,
+  },
+  faqAnswer: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#475569',
+  },
+  footerTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
+    color: '#9A3412',
+  },
+  footerText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#7C2D12',
+  },
+  footerCard: {
+    backgroundColor: '#FFF7ED',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    padding: spacing.lg,
+    gap: 6,
+  },
+});

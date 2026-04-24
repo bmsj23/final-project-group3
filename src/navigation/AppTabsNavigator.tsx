@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { MyEventsScreen } from '../features/bookings/screens/MyEventsScreen';
 import { ExploreScreen } from '../features/events/screens/ExploreScreen';
 import { HomeScreen } from '../features/events/screens/HomeScreen';
-import { ProfileScreen } from '../features/profile/screens/ProfileScreen';
+import { ProfileScreen } from '../features/profile/profile/ProfileScreen';
 import { colors } from '../theme/colors';
 import { fontFamily } from '../theme/typography';
 import type { AppTabParamList } from './types';
