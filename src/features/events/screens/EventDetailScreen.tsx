@@ -277,8 +277,8 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
           {/* Detail rows */}
           <Text style={styles.sectionTitle}>Event Details</Text>
           <View style={styles.detailCard}>
-            {detailRows.map((row, i) => (
-              <View key={row.label} style={[styles.detailRow, i < detailRows.length - 1 && styles.detailRowBorder]}>
+            {detailRows.map((row) => (
+              <View key={row.label} style={styles.detailRow}>
                 <View style={styles.detailIconWrap}>
                   <Ionicons name={row.icon} size={17} color={colors.primary} />
                 </View>
@@ -454,7 +454,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   detailRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 14 },
-  detailRowBorder: { borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   detailIconWrap: {
     width: 42, height: 42, borderRadius: 13,
     backgroundColor: 'rgba(30,58,138,0.08)',
