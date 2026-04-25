@@ -264,20 +264,12 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
           <View style={styles.metaRow}>
             <View style={styles.actionRow}>
               {isOwner && (
-                <>
-                  <Pressable
-                    style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.6 }]}
-                    onPress={() => navigation.navigate('EditEvent', { eventId: event.id })}
-                  >
-                    <Ionicons name="pencil" size={19} color="#6B7280" />
-                  </Pressable>
-                  <Pressable
-                    style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.6 }]}
-                    onPress={confirmDelete}
-                  >
-                    <Ionicons name="trash-outline" size={19} color="#EF4444" />
-                  </Pressable>
-                </>
+                <Pressable
+                  style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.6 }]}
+                  onPress={confirmDelete}
+                >
+                  <Ionicons name="trash-outline" size={19} color="#EF4444" />
+                </Pressable>
               )}
             </View>
           </View>
@@ -365,16 +357,25 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
       {/* ── Sticky footer ── */}
       <View style={styles.stickyFooter}>
         {isOwner ? (
-          <Pressable
-            style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.88 }, event.status === 'cancelled' && styles.cancelBtnDisabled]}
-            onPress={confirmCancel}
-            disabled={event.status === 'cancelled'}
-          >
-            <Ionicons name="close-circle-outline" size={20} color={event.status === 'cancelled' ? '#9CA3AF' : '#EF4444'} />
-            <Text style={[styles.cancelBtnText, event.status === 'cancelled' && styles.cancelBtnTextDisabled]}>
-              {event.status === 'cancelled' ? 'Event Cancelled' : 'Cancel Event'}
-            </Text>
-          </Pressable>
+          <View style={styles.ownerFooterRow}>
+            <Pressable
+              style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.88 }, event.status === 'cancelled' && styles.cancelBtnDisabled]}
+              onPress={confirmCancel}
+              disabled={event.status === 'cancelled'}
+            >
+              <Ionicons name="close-circle-outline" size={19} color={event.status === 'cancelled' ? '#9CA3AF' : '#EF4444'} />
+              <Text style={[styles.cancelBtnText, event.status === 'cancelled' && styles.cancelBtnTextDisabled]}>
+                {event.status === 'cancelled' ? 'Cancelled' : 'Cancel Event'}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.editBtn, pressed && { opacity: 0.88 }]}
+              onPress={() => navigation.navigate('EditEvent', { eventId: event.id })}
+            >
+              <Ionicons name="pencil" size={19} color="#fff" />
+              <Text style={styles.editBtnText}>Edit Event</Text>
+            </Pressable>
+          </View>
         ) : (
           <Pressable
             style={({ pressed }) => [styles.bookBtn, pressed && { opacity: 0.88 }]}
@@ -559,7 +560,17 @@ const styles = StyleSheet.create({
     minHeight: 56, gap: 10,
   },
   bookBtnText: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#fff' },
+  ownerFooterRow: { flexDirection: 'row', gap: 12 },
+  editBtn: {
+    flex: 1,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    minHeight: 56, gap: 10,
+  },
+  editBtnText: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#fff' },
   cancelBtn: {
+    flex: 1,
     borderRadius: 16,
     backgroundColor: 'rgba(239,68,68,0.08)',
     borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)',
