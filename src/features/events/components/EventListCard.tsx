@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -15,6 +14,8 @@ type EventListCardProps = {
   event: EventSummary;
   categoryName?: string;
   onPress?: () => void;
+  isFavorited?: boolean;
+  onToggleFavorite?: () => void;
   variant?: 'featured' | 'compact';
 };
 
@@ -69,11 +70,12 @@ const stackStyles = StyleSheet.create({
 export function EventListCard({
   categoryName,
   event,
+  isFavorited = false,
   onPress,
+  onToggleFavorite,
   variant = 'compact',
 }: EventListCardProps) {
   const joinedCount = event.capacity - event.remainingSlots;
-  const [isFavorited, setIsFavorited] = useState(false);
 
   return (
     <View style={[styles.shadowWrap, variant === 'featured' ? styles.featuredCard : null]}>
@@ -90,7 +92,14 @@ export function EventListCard({
             style={styles.featuredImage}
             transition={150}
           />
-          <Pressable onPress={() => setIsFavorited(prev => !prev)} style={styles.favouriteBadge}>
+          <Pressable
+            disabled={!onToggleFavorite}
+            onPress={(pressEvent) => {
+              pressEvent.stopPropagation();
+              onToggleFavorite?.();
+            }}
+            style={styles.favouriteBadge}
+          >
             <Ionicons
               color={isFavorited ? colors.error : colors.textMuted}
               name={isFavorited ? 'heart' : 'heart-outline'}
@@ -141,6 +150,22 @@ export function EventListCard({
             </View>
           </View>
           <View style={styles.trailingColumn}>
+            {onToggleFavorite ? (
+              <Pressable
+                accessibilityLabel={isFavorited ? 'Remove from saved' : 'Save event'}
+                onPress={(pressEvent) => {
+                  pressEvent.stopPropagation();
+                  onToggleFavorite();
+                }}
+                style={styles.compactFavoriteBtn}
+              >
+                <Ionicons
+                  color={isFavorited ? colors.error : colors.textMuted}
+                  name={isFavorited ? 'heart' : 'heart-outline'}
+                  size={16}
+                />
+              </Pressable>
+            ) : null}
             <Text style={styles.spotsText}>{event.remainingSlots} spots</Text>
             <View style={styles.joinButton}>
               <Text style={styles.joinButtonText}>JOIN</Text>
@@ -259,6 +284,14 @@ const styles = StyleSheet.create({
   trailingColumn: {
     alignItems: 'flex-end',
     gap: spacing.sm,
+  },
+  compactFavoriteBtn: {
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: radius.full,
+    height: 30,
+    justifyContent: 'center',
+    width: 30,
   },
   spotsText: {
     ...typography.caption3,
