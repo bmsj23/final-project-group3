@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   spotsSection: { gap: 8 },
   spotsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   spotsLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#6B7280' },
-  spotsCount: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#6B7280' },
+  spotsCount: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#111827' },
   spotsTrack: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden' },
   spotsFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 3 },
 
