@@ -218,7 +218,7 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             <View style={styles.badgeRow}>
               {event.categoryName ? (
                 <View style={styles.categoryPill}>
-                  <Ionicons name="pricetag-outline" size={12} color={colors.primary} />
+                  <Ionicons name="pricetag-outline" size={10} color={colors.primary} />
                   <Text style={styles.categoryText}>{event.categoryName}</Text>
                 </View>
               ) : null}
@@ -400,10 +400,10 @@ const styles = StyleSheet.create({
   badgeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
   },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase' },
+  statusText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase' },
   flaggedBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: 'rgba(239,68,68,0.1)',
@@ -417,12 +417,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   categoryPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: 'rgba(30,58,138,0.07)',
     borderWidth: 1, borderColor: 'rgba(30,58,138,0.15)',
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
   },
-  categoryText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: colors.primary },
+  categoryText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: colors.primary, textTransform: 'uppercase', letterSpacing: 0.4 },
   actionRow: { flexDirection: 'row', gap: 6 },
   actionBtn: {
     width: 38, height: 38, borderRadius: 19,
