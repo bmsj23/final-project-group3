@@ -216,18 +216,18 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
           {/* Status + category + title */}
           <View style={styles.titleBlock}>
             <View style={styles.badgeRow}>
-              <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-                <View style={[styles.statusDot, { backgroundColor: statusStyle.text }]} />
-                <Text style={[styles.statusText, { color: statusStyle.text }]}>
-                  {formatEventStatus(event.status)}
-                </Text>
-              </View>
               {event.categoryName ? (
                 <View style={styles.categoryPill}>
                   <Ionicons name="pricetag-outline" size={12} color={colors.primary} />
                   <Text style={styles.categoryText}>{event.categoryName}</Text>
                 </View>
               ) : null}
+              <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                <View style={[styles.statusDot, { backgroundColor: statusStyle.text }]} />
+                <Text style={[styles.statusText, { color: statusStyle.text }]}>
+                  {formatEventStatus(event.status)}
+                </Text>
+              </View>
               {event.isFlagged && (
                 <View style={styles.flaggedBadge}>
                   <Ionicons name="flag" size={11} color="#EF4444" />
