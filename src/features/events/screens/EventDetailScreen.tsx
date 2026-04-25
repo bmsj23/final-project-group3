@@ -22,6 +22,7 @@ import { radius } from '../../../theme/radius';
 import { spacing } from '../../../theme/spacing';
 import { layout } from '../../../theme/layout';
 import {
+  cancelOwnEvent,
   deleteEventImageFromPublicUrl,
   deleteOwnEvent,
   fetchEventById,
@@ -102,6 +103,27 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: () => void handleDelete() },
+      ],
+    );
+  }
+
+  async function handleCancel() {
+    if (!event) return;
+    const { error } = await cancelOwnEvent(event.id);
+    if (error) {
+      Alert.alert('Error', error.message ?? 'Could not cancel event.');
+      return;
+    }
+    setEvent(prev => prev ? { ...prev, status: 'cancelled' } : prev);
+  }
+
+  function confirmCancel() {
+    Alert.alert(
+      'Cancel this event?',
+      'Registered attendees will be notified. You can re-open the event later by editing it.',
+      [
+        { text: 'Keep Event', style: 'cancel' },
+        { text: 'Cancel Event', style: 'destructive', onPress: () => void handleCancel() },
       ],
     );
   }
@@ -341,8 +363,19 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
       </ScrollView>
 
       {/* ── Sticky footer ── */}
-      {!isOwner && (
-        <View style={styles.stickyFooter}>
+      <View style={styles.stickyFooter}>
+        {isOwner ? (
+          <Pressable
+            style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.88 }, event.status === 'cancelled' && styles.cancelBtnDisabled]}
+            onPress={confirmCancel}
+            disabled={event.status === 'cancelled'}
+          >
+            <Ionicons name="close-circle-outline" size={20} color={event.status === 'cancelled' ? '#9CA3AF' : '#EF4444'} />
+            <Text style={[styles.cancelBtnText, event.status === 'cancelled' && styles.cancelBtnTextDisabled]}>
+              {event.status === 'cancelled' ? 'Event Cancelled' : 'Cancel Event'}
+            </Text>
+          </Pressable>
+        ) : (
           <Pressable
             style={({ pressed }) => [styles.bookBtn, pressed && { opacity: 0.88 }]}
             onPress={() => Alert.alert('Booking', 'Booking feature coming soon! 🎟️')}
@@ -350,8 +383,8 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             <Ionicons name="ticket-outline" size={20} color="#fff" />
             <Text style={styles.bookBtnText}>Register Now</Text>
           </Pressable>
-        </View>
-      )}
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -526,4 +559,17 @@ const styles = StyleSheet.create({
     minHeight: 56, gap: 10,
   },
   bookBtnText: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#fff' },
+  cancelBtn: {
+    borderRadius: 16,
+    backgroundColor: 'rgba(239,68,68,0.08)',
+    borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    minHeight: 56, gap: 10,
+  },
+  cancelBtnDisabled: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+  },
+  cancelBtnText: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#EF4444' },
+  cancelBtnTextDisabled: { color: '#9CA3AF' },
 });

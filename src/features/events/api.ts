@@ -227,6 +227,11 @@ export async function deleteOwnEvent(eventId: string) {
   return client.from('events').delete().eq('id', eventId);
 }
 
+export async function cancelOwnEvent(eventId: string) {
+  const client = requireSupabase();
+  return client.from('events').update({ status: 'cancelled' }).eq('id', eventId);
+}
+
 export async function uploadEventImage(organizerId: string, asset: EventImageAsset) {
   const client = requireSupabase();
 
