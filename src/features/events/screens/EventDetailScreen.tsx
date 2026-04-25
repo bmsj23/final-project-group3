@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
     marginTop: -24,
     paddingHorizontal: layout.screenPaddingH,
     paddingTop: 14,
-    paddingBottom: 40,
+    paddingBottom: 5,
     gap: 20,
   },
   grabber: {
