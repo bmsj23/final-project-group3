@@ -241,12 +241,6 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
           {/* Actions */}
           <View style={styles.metaRow}>
             <View style={styles.actionRow}>
-              <Pressable
-                style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.6 }]}
-                onPress={() => setIsSaved(v => !v)}
-              >
-                <Ionicons name={isSaved ? 'heart' : 'heart-outline'} size={19} color={isSaved ? '#EF4444' : '#6B7280'} />
-              </Pressable>
               {isOwner && (
                 <>
                   <Pressable
