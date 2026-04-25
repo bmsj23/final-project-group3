@@ -247,12 +247,6 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
               >
                 <Ionicons name={isSaved ? 'heart' : 'heart-outline'} size={19} color={isSaved ? '#EF4444' : '#6B7280'} />
               </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.6 }]}
-                onPress={() => Alert.alert('Share', 'Sharing feature coming soon!')}
-              >
-                <Ionicons name="share-outline" size={19} color="#6B7280" />
-              </Pressable>
               {isOwner && (
                 <>
                   <Pressable
