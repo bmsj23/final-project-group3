@@ -397,14 +397,13 @@ const styles = StyleSheet.create({
   },
 
   titleBlock: { gap: 10 },
-  badgeRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  badgeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
-    alignSelf: 'flex-start',
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
   },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase' },
+  statusText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase' },
   flaggedBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: 'rgba(239,68,68,0.1)',
