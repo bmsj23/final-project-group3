@@ -213,7 +213,7 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
         >
           <View style={styles.grabber} />
 
-          {/* Status + title */}
+          {/* Status + category + title */}
           <View style={styles.titleBlock}>
             <View style={styles.badgeRow}>
               <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
@@ -222,6 +222,12 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
                   {formatEventStatus(event.status)}
                 </Text>
               </View>
+              {event.categoryName ? (
+                <View style={styles.categoryPill}>
+                  <Ionicons name="pricetag-outline" size={12} color={colors.primary} />
+                  <Text style={styles.categoryText}>{event.categoryName}</Text>
+                </View>
+              ) : null}
               {event.isFlagged && (
                 <View style={styles.flaggedBadge}>
                   <Ionicons name="flag" size={11} color="#EF4444" />
@@ -232,14 +238,8 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             <Text style={styles.title} numberOfLines={3}>{event.title}</Text>
           </View>
 
-          {/* Category + actions */}
+          {/* Actions */}
           <View style={styles.metaRow}>
-            {event.categoryName ? (
-              <View style={styles.categoryPill}>
-                <Ionicons name="pricetag-outline" size={12} color={colors.primary} />
-                <Text style={styles.categoryText}>{event.categoryName}</Text>
-              </View>
-            ) : <View />}
             <View style={styles.actionRow}>
               <Pressable
                 style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.6 }]}
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
 
   metaRow: {
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
   },
   categoryPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
