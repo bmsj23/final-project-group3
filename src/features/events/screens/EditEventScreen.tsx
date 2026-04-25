@@ -7,7 +7,6 @@ import {
   Alert,
   Animated,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -36,12 +35,6 @@ import type { EventCategorySummary, EventDetail } from '../types';
 
 type EditEventScreenProps = NativeStackScreenProps<AppStackParamList, 'EditEvent'>;
 
-const STEP_META = [
-  { label: 'Details',  sub: 'Name, category & description' },
-  { label: 'Schedule', sub: 'Date, time & deadline'        },
-  { label: 'Review',   sub: 'Preview & save'               },
-];
-
 export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
   const { isAuthenticated, isGuest, profile, signOut } = useAppSession();
   const [event, setEvent]                     = useState<EventDetail | null>(null);
@@ -50,7 +43,6 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
   const [isSubmitting, setIsSubmitting]       = useState(false);
   const [screenError, setScreenError]         = useState<string | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
-  const [currentStep, setCurrentStep]         = useState(0);
   const [isDirty, setIsDirty]                 = useState(false);
   const scrollRef = useRef<ScrollView | null>(null);
   const handleDescriptionFocus = useCallback(() => {
@@ -272,60 +264,59 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
           keyboardDismissMode="interactive"
           contentContainerStyle={styles.scroll}
         >
-        {/* ── Hero ── */}
-        <Animated.View
-          style={[
-            styles.hero,
-            {
-              opacity: heroAnim,
-              transform: [{ translateY: heroAnim.interpolate({ inputRange:[0,1], outputRange:[-20,0] }) }],
-            },
-          ]}
-        >
-          <View style={styles.heroTopRow}>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="chevron-back" size={20} color="#CBD5E1" />
-            </Pressable>
-            {/* Amber badge — distinct from Create blue */}
-            <LinearGradient colors={['#D97706', '#F59E0B']} style={styles.heroBadge}>
-              <Ionicons name="pencil" size={20} color="#fff" />
-            </LinearGradient>
+          {/* ── Hero ── */}
+          <Animated.View
+            style={[
+              styles.hero,
+              {
+                opacity: heroAnim,
+                transform: [{ translateY: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+              },
+            ]}
+          >
+            <View style={styles.heroTopRow}>
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
+                onPress={() => navigation.goBack()}
+              >
+                <Ionicons name="chevron-back" size={20} color="#CBD5E1" />
+              </Pressable>
+              {/* Amber badge — distinct from Create's blue */}
+              <LinearGradient colors={['#D97706', '#F59E0B']} style={styles.heroBadge}>
+                <Ionicons name="pencil" size={20} color="#fff" />
+              </LinearGradient>
+            </View>
+
+            <Text style={styles.heroEyebrow}>Organizer Tools</Text>
+            <Text style={styles.heroTitle}>Edit Event</Text>
+            <Text style={styles.heroSub}>
+              Update the details, schedule, or cover image for your event.
+            </Text>
+
+            {/* Editing chip */}
+            <View style={styles.editingChip}>
+              <Ionicons name="calendar-outline" size={13} color="#FBBF24" />
+              <Text style={styles.editingChipText} numberOfLines={1}>{event.title}</Text>
+            </View>
+          </Animated.View>
+
+          {/* ── White form sheet ── */}
+          <View style={styles.formSheet}>
+            <View style={styles.formHandle} />
+            <EventForm
+              categories={categories}
+              errorMessage={submissionError}
+              initialValues={initialValues!}
+              isSubmitting={isSubmitting}
+              onStepChange={() => {}}
+              onSubmit={handleSubmit}
+              onDescriptionFocus={handleDescriptionFocus}
+              onDirtyChange={setIsDirty}
+              resetKey={`${event.id}:${event.updatedAt}`}
+              submitLabel={isSubmitting ? 'Saving Changes…' : 'Save Changes ✦'}
+            />
           </View>
-
-          <Text style={styles.heroEyebrow}>Organizer Tools</Text>
-          <Text style={styles.heroTitle}>Edit Event</Text>
-          <Text style={styles.heroSub}>
-            Update the details, schedule, or cover image for your event.
-          </Text>
-
-          {/* Editing chip */}
-          <View style={styles.editingChip}>
-            <Ionicons name="calendar-outline" size={13} color="#FBBF24" />
-            <Text style={styles.editingChipText} numberOfLines={1}>{event.title}</Text>
-          </View>
-
-        </Animated.View>
-
-        {/* ── White form sheet ── */}
-        <View style={styles.formSheet}>
-          <View style={styles.formHandle} />
-          <EventForm
-            categories={categories}
-            errorMessage={submissionError}
-            initialValues={initialValues!}
-            isSubmitting={isSubmitting}
-            onStepChange={setCurrentStep}
-            onSubmit={handleSubmit}
-            onDescriptionFocus={handleDescriptionFocus}
-            onDirtyChange={setIsDirty}
-            resetKey={`${event.id}:${event.updatedAt}`}
-            submitLabel={isSubmitting ? 'Saving Changes…' : 'Save Changes ✦'}
-          />
-        </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -333,8 +324,8 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: '#060D1F' },
-  scroll: { flexGrow: 1, paddingBottom: 0 },
+  root:       { flex: 1, backgroundColor: '#060D1F' },
+  scroll:     { flexGrow: 1, paddingBottom: 0 },
   scrollView: { flex: 1 },
 
   orbAmber: {
@@ -356,14 +347,14 @@ const styles = StyleSheet.create({
     width: 64, height: 64, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
   },
-  stateTitle: { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#F1F5F9', textAlign: 'center' },
-  stateSub:   { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#475569', textAlign: 'center', lineHeight: 20 },
-  stateBtnRow:{ flexDirection: 'row', gap: spacing.sm },
+  stateTitle:    { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#F1F5F9', textAlign: 'center' },
+  stateSub:      { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#475569', textAlign: 'center', lineHeight: 20 },
+  stateBtnRow:   { flexDirection: 'row', gap: spacing.sm },
   stateBtn: {
     backgroundColor: 'rgba(245,158,11,0.15)', borderRadius: radius.full,
     paddingHorizontal: 22, paddingVertical: 11, marginTop: 4,
   },
-  stateBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#FBBF24' },
+  stateBtnText:  { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#FBBF24' },
   stateSecBtn: {
     backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: radius.full,
     paddingHorizontal: 22, paddingVertical: 11, marginTop: 4,
@@ -408,31 +399,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold', fontSize: 12,
     color: '#FBBF24', maxWidth: 220,
   },
-
-  stepTracker: { gap: spacing.xs },
-  stepCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
-    borderRadius: radius.md, padding: 12,
-  },
-  stepCardActive: { backgroundColor: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.28)' },
-  stepCardDone:   { backgroundColor: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.25)' },
-  stepBadge: {
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  stepBadgeActive: { backgroundColor: '#F59E0B', borderColor: '#F59E0B' },
-  stepBadgeDone:   { backgroundColor: '#10B981', borderColor: '#10B981' },
-  stepNum:         { fontFamily: 'Inter_700Bold', fontSize: 12, color: '#475569' },
-  stepInfo:        { flex: 1 },
-  stepLabel:       { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#334155' },
-  stepLabelActive: { color: '#FDE68A' },
-  stepLabelDone:   { color: '#6EE7B7' },
-  stepSub:         { fontFamily: 'Inter_400Regular', fontSize: 11, color: '#334155', marginTop: 1 },
-  indicator:       { paddingLeft: 4 },
 
   formSheet: {
     flex: 1,

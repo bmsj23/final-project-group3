@@ -227,18 +227,13 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
             >
               <Ionicons name="chevron-back" size={20} color="#CBD5E1" />
             </Pressable>
-            <LinearGradient colors={['#2563EB', '#1D4ED8']} style={styles.heroBadge}>
-              <Ionicons name="add-circle-outline" size={22} color="#fff" />
-            </LinearGradient>
+            <Text style={styles.heroEyebrow}>Organizer Tools</Text>
           </View>
 
-          <Text style={styles.heroEyebrow}>Organizer Tools</Text>
           <Text style={styles.heroTitle}>Create New Event</Text>
           <Text style={styles.heroSub}>
             Fill in the details below to publish your event to campus attendees.
           </Text>
-
-          {/* Synced step tracker */}
         </Animated.View>
 
         {/* ── White form sheet ── */}
@@ -296,7 +291,7 @@ const styles = StyleSheet.create({
   stateBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#60A5FA' },
 
   hero: {
-    paddingTop: 52, paddingHorizontal: layout.screenPaddingH, paddingBottom: 24,
+    paddingTop: 52, paddingHorizontal: layout.screenPaddingH, paddingBottom: 16,
   },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 22 },
   backBtn: {
@@ -310,8 +305,9 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   heroEyebrow: {
-    fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#60A5FA',
+    fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#60A5FA',
     letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6,
+    paddingTop: 8, paddingHorizontal: 10,
   },
   heroTitle: {
     fontFamily: 'Inter_700Bold', fontSize: 28,
@@ -358,7 +354,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15, shadowRadius: 20, elevation: 16,
   },
   formHandle: {
-    width: 40, height: 5, borderRadius: 3,
-    backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 20,
+    width: 0, height: 0, borderRadius: 3,
+    backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 0,
   },
 });

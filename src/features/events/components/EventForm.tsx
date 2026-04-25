@@ -11,6 +11,7 @@ import {
   Animated,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -80,7 +81,7 @@ function FieldLabel({ text, required }: { text: string; required?: boolean }) {
 const fl = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   label: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#334155' },
-  required: { fontFamily: 'Inter_700Bold', fontSize: 13, color: colors.primary },
+  required: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#EF4444' },
 });
 
 // ─── Custom text field ────────────────────────────────────────────────────────
@@ -286,11 +287,7 @@ type PickerTarget = 'eventDate' | 'eventTime' | 'deadlineDate' | 'deadlineTime';
 
 function getDateFromInput(value: string) {
   const isoValue = parseDateTimeInput(value);
-
-  if (!isoValue) {
-    return null;
-  }
-
+  if (!isoValue) return null;
   const date = new Date(isoValue);
   return Number.isFinite(date.getTime()) ? date : null;
 }
@@ -322,29 +319,14 @@ function setTimePart(currentValue: string, nextTime: Date) {
 
 function formatPickerDate(value: string) {
   const date = getDateFromInput(value);
-
-  if (!date) {
-    return 'Select date';
-  }
-
-  return date.toLocaleDateString('en-PH', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  if (!date) return 'Select date';
+  return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function formatPickerTime(value: string) {
   const date = getDateFromInput(value);
-
-  if (!date) {
-    return 'Select time';
-  }
-
-  return date.toLocaleTimeString('en-PH', {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  if (!date) return 'Select time';
+  return date.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
 }
 
 function getPickerTitle(target: PickerTarget | null) {
@@ -371,7 +353,6 @@ function PickerField({
   onPress: () => void;
 }) {
   const hasError = Boolean(error);
-
   return (
     <View style={styles.fieldWrap}>
       <FieldLabel text={label} required={required} />
@@ -416,10 +397,12 @@ export function EventForm({
   const [deadlineInput, setDeadlineInput] = useState(formatDateTimeInput(initialValues.registrationDeadline));
   const [tagsInput, setTagsInput] = useState(tagsToInput(initialValues.tags));
   const [errors, setErrors] = useState<EventFormErrors>({});
-  const [selectedImage, setSelectedImage] = useState<EventImageAsset | null>(null);
+  const [selectedImages, setSelectedImages] = useState<EventImageAsset[]>([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [removeExisting, setRemoveExisting] = useState(false);
   const [step, setStep] = useState(0);
   const [activePicker, setActivePicker] = useState<PickerTarget | null>(null);
+  const galleryScrollRef = useRef<ScrollView | null>(null);
 
   // Slide animation between steps
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -439,7 +422,8 @@ export function EventForm({
     setDeadlineInput(formatDateTimeInput(initialValues.registrationDeadline));
     setTagsInput(tagsToInput(initialValues.tags));
     setErrors({});
-    setSelectedImage(null);
+    setSelectedImages([]);
+    setSelectedImageIndex(0);
     setRemoveExisting(false);
     setStep(0);
     setActivePicker(null);
@@ -461,7 +445,7 @@ export function EventForm({
       dateTimeInput !== initialDateTimeInput ||
       deadlineInput !== initialDeadlineInput ||
       tagsInput !== initialTagsInput ||
-      Boolean(selectedImage) ||
+      selectedImages.length > 0 ||
       removeExisting ||
       step > 0;
 
@@ -473,31 +457,77 @@ export function EventForm({
     initialValues,
     onDirtyChange,
     removeExisting,
-    selectedImage,
+    selectedImages,
     step,
     tagsInput,
     values,
   ]);
 
-  const previewUri = selectedImage?.uri ?? (removeExisting ? null : initialValues.coverImageUrl ?? null);
+  // ── Derived preview URI ─────────────────────────────────────────────────
+  const previewUri = selectedImages.length > 0
+    ? selectedImages[selectedImageIndex]?.uri
+    : (removeExisting ? null : initialValues.coverImageUrl ?? null);
 
+  // ── Helpers ─────────────────────────────────────────────────────────────
   function updateValue<K extends keyof EventFormValues>(key: K, val: EventFormValues[K]) {
     setValues(p => ({ ...p, [key]: val }));
     setErrors(p => ({ ...p, [key]: undefined }));
   }
 
+  // ── FIX: allowsMultipleSelection is set in imagePicker.ts; here we
+  //    merge the returned array into state inside the updater so we never
+  //    read stale selectedImages.length from the closure.
   async function handlePickImage() {
     setErrors(p => ({ ...p, coverImageUrl: undefined }));
     const { data, error } = await pickEventImageAsset();
     if (error) { setErrors(p => ({ ...p, coverImageUrl: error.message })); return; }
     if (!data) return;
-    setSelectedImage(data);
+
+    const incoming = Array.isArray(data) ? data : [data];
+
+    setSelectedImages(prev => {
+      const updated = [...prev, ...incoming];
+      // Set index to the last newly added image — safe because we're inside the updater
+      setSelectedImageIndex(updated.length - 1);
+      return updated;
+    });
     setRemoveExisting(false);
   }
 
-  function handleRemoveImage() {
-    if (selectedImage) { setSelectedImage(null); return; }
+  function handleRemoveImage(index: number) {
+    if (selectedImages.length > 0) {
+      const newImages = selectedImages.filter((_, i) => i !== index);
+      setSelectedImages(newImages);
+      setSelectedImageIndex(Math.min(selectedImageIndex, Math.max(0, newImages.length - 1)));
+      return;
+    }
     if (initialValues.coverImageUrl) setRemoveExisting(v => !v);
+  }
+
+  function handleClearAll() {
+    setSelectedImages([]);
+    setSelectedImageIndex(0);
+    setRemoveExisting(true);
+  }
+
+  function scrollGalleryLeft() {
+    const itemWidth = 60 + spacing.sm;
+    galleryScrollRef.current?.scrollTo({
+      x: Math.max(0, selectedImageIndex * itemWidth - itemWidth),
+      animated: true,
+    });
+    setSelectedImageIndex(Math.max(0, selectedImageIndex - 1));
+  }
+
+  function scrollGalleryRight() {
+    const itemWidth = 60 + spacing.sm;
+    if (selectedImageIndex < selectedImages.length - 1) {
+      galleryScrollRef.current?.scrollTo({
+        x: (selectedImageIndex + 1) * itemWidth,
+        animated: true,
+      });
+      setSelectedImageIndex(selectedImageIndex + 1);
+    }
   }
 
   function getPickerValue(target: PickerTarget) {
@@ -512,30 +542,25 @@ export function EventForm({
   }
 
   function handlePickerChange(target: PickerTarget, event: DateTimePickerEvent, selectedDate?: Date) {
-    if (event.type !== 'set' || !selectedDate) {
-      return;
-    }
+    if (event.type !== 'set' || !selectedDate) return;
 
     if (target === 'eventDate') {
       setDateTimeInput(setDatePart(dateTimeInput, selectedDate));
-      setErrors((prev) => ({ ...prev, dateTime: undefined }));
+      setErrors(prev => ({ ...prev, dateTime: undefined }));
       return;
     }
-
     if (target === 'eventTime') {
       setDateTimeInput(setTimePart(dateTimeInput, selectedDate));
-      setErrors((prev) => ({ ...prev, dateTime: undefined }));
+      setErrors(prev => ({ ...prev, dateTime: undefined }));
       return;
     }
-
     if (target === 'deadlineDate') {
       setDeadlineInput(setDatePart(deadlineInput, selectedDate));
-      setErrors((prev) => ({ ...prev, registrationDeadline: undefined }));
+      setErrors(prev => ({ ...prev, registrationDeadline: undefined }));
       return;
     }
-
     setDeadlineInput(setTimePart(deadlineInput, selectedDate));
-    setErrors((prev) => ({ ...prev, registrationDeadline: undefined }));
+    setErrors(prev => ({ ...prev, registrationDeadline: undefined }));
   }
 
   // ── Step nav with validation ────────────────────────────────────────────
@@ -554,7 +579,6 @@ export function EventForm({
   }
 
   async function handleSubmit() {
-    // Final full validation just in case
     const parsedCap = Number.parseInt(capacityInput.trim(), 10);
     const nextValues: EventFormValues = {
       ...values,
@@ -567,7 +591,6 @@ export function EventForm({
     const allErrors = validateEventForm(nextValues);
     if (Object.keys(allErrors).length > 0) {
       setErrors(allErrors);
-      // Jump back to the first step that has errors
       const step0Fields: (keyof EventFormValues)[] = ['title', 'category', 'location', 'capacity', 'description'];
       const step1Fields: (keyof EventFormValues)[] = ['dateTime', 'registrationDeadline'];
       if (step0Fields.some(f => allErrors[f])) { animateStep(0); return; }
@@ -576,9 +599,9 @@ export function EventForm({
     }
     await onSubmit({
       values: nextValues,
-      selectedImage,
+      selectedImage: selectedImages.length > 0 ? selectedImages[0] : null,
       originalCoverImageUrl: initialValues.coverImageUrl ?? null,
-      coverImageChanged: Boolean(selectedImage) || removeExisting,
+      coverImageChanged: selectedImages.length > 0 || removeExisting,
     });
   }
 
@@ -606,14 +629,12 @@ export function EventForm({
                     mode="single"
                     date={getPickerValue(activePicker)}
                     minDate={getTodayAtMidnight()}
-                    // ── Disable dates after the event date for the deadline picker ──
                     disabledDates={
                       activePicker === 'deadlineDate'
                         ? (date) => {
                           const eventDate = getDateFromInput(dateTimeInput);
                           if (!eventDate || !date) return false;
                           const d = dayjs(date).toDate();
-                          // Strip time — only compare calendar days
                           d.setHours(0, 0, 0, 0);
                           const event = new Date(eventDate);
                           event.setHours(0, 0, 0, 0);
@@ -642,7 +663,7 @@ export function EventForm({
                       today: { borderWidth: 1.5, borderColor: '#2563EB', borderRadius: 20 },
                       today_label: { fontFamily: 'Inter_700Bold', color: '#2563EB' },
                       disabled: { opacity: 0.3 },
-                      disabled_label: { color: '#CBD5E1' },
+                      disabled_label: { color: '#505459' },
                     }}
                   />
                 ) : (
@@ -661,6 +682,7 @@ export function EventForm({
           </Pressable>
         </Pressable>
       </Modal>
+
       {/* ── Step progress bar ── */}
       <View style={styles.progress}>
         {STEPS.map((s, i) => (
@@ -686,7 +708,10 @@ export function EventForm({
       </View>
 
       {/* ── Animated step content ── */}
-      <Animated.View style={{ opacity: slideAnim.interpolate({ inputRange: [-30, 0, 30], outputRange: [0, 1, 0] }), transform: [{ translateX: slideAnim }] }}>
+      <Animated.View style={{
+        opacity: slideAnim.interpolate({ inputRange: [-30, 0, 30], outputRange: [0, 1, 0] }),
+        transform: [{ translateX: slideAnim }],
+      }}>
 
         {/* ══ STEP 0: DETAILS ══ */}
         {step === 0 && (
@@ -694,7 +719,7 @@ export function EventForm({
 
             {/* Cover image */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Cover Image</Text>
+              <Text style={styles.sectionTitle}>Cover Images</Text>
               <Text style={styles.sectionSub}>Optional — adds visual appeal in the event feed</Text>
 
               <Pressable
@@ -707,7 +732,9 @@ export function EventForm({
                     <Image contentFit="cover" source={{ uri: previewUri }} style={styles.coverImg} transition={150} />
                     <View style={styles.coverOverlay}>
                       <Ionicons name="camera" size={20} color="#fff" />
-                      <Text style={styles.coverOverlayText}>Change Photo</Text>
+                      <Text style={styles.coverOverlayText}>
+                        {selectedImages.length > 0 ? 'Add More Photos' : 'Change Photo'}
+                      </Text>
                     </View>
                   </>
                 ) : (
@@ -715,19 +742,73 @@ export function EventForm({
                     <View style={styles.coverPlaceholderIcon}>
                       <Ionicons name="image-outline" size={28} color={colors.primary} />
                     </View>
-                    <Text style={styles.coverPlaceholderTitle}>Add Cover Photo</Text>
-                    <Text style={styles.coverPlaceholderSub}>JPG, PNG, WEBP · up to {EVENT_IMAGE_MAX_SIZE_LABEL}</Text>
+                    <Text style={styles.coverPlaceholderTitle}>Add Cover Photos</Text>
+                    <Text style={styles.coverPlaceholderSub}>JPG, PNG, WEBP · up to {EVENT_IMAGE_MAX_SIZE_LABEL} each</Text>
                   </View>
                 )}
               </Pressable>
 
-              {previewUri && (
-                <Pressable style={styles.removeImgBtn} onPress={handleRemoveImage}>
-                  <Ionicons name="trash-outline" size={14} color="#EF4444" />
-                  <Text style={styles.removeImgText}>
-                    {selectedImage ? 'Undo change' : removeExisting ? 'Restore image' : 'Remove image'}
-                  </Text>
-                </Pressable>
+              {/* Images gallery - Horizontal scrollable */}
+              {selectedImages.length > 0 && (
+                <View style={styles.galleryContainer}>
+                  {selectedImages.length > 1 && (
+                    <Pressable style={styles.arrowBtn} onPress={scrollGalleryLeft} disabled={selectedImageIndex === 0}>
+                      <Ionicons name="chevron-back" size={16} color={selectedImageIndex === 0 ? '#CBD5E1' : '#0F172A'} />
+                    </Pressable>
+                  )}
+                  <ScrollView
+                    ref={galleryScrollRef}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    scrollEventThrottle={16}
+                    style={styles.galleryScroll}
+                    contentContainerStyle={styles.galleryScrollContent}
+                  >
+                    {selectedImages.map((img, idx) => (
+                      <View key={`${idx}-${img.fileName}`} style={styles.galleryThumbWrap}>
+                        <Pressable
+                          style={[styles.galleryThumbnail, idx === selectedImageIndex && styles.galleryThumbnailActive]}
+                          onPress={() => {
+                            setSelectedImageIndex(idx);
+                            galleryScrollRef.current?.scrollTo({
+                              x: idx * (60 + spacing.sm),
+                              animated: true,
+                            });
+                          }}
+                        >
+                          <Image contentFit="cover" source={{ uri: img.uri }} style={styles.galleryThumbImage} transition={150} />
+                        </Pressable>
+                        <Pressable
+                          style={styles.galleryThumbRemoveBtn}
+                          onPress={() => handleRemoveImage(idx)}
+                          hitSlop={6}
+                        >
+                          <Ionicons name="close" size={10} color="#fff" />
+                        </Pressable>
+                      </View>
+                    ))}
+                  </ScrollView>
+                  {selectedImages.length > 1 && (
+                    <Pressable style={styles.arrowBtn} onPress={scrollGalleryRight} disabled={selectedImageIndex === selectedImages.length - 1}>
+                      <Ionicons name="chevron-forward" size={16} color={selectedImageIndex === selectedImages.length - 1 ? '#CBD5E1' : '#0F172A'} />
+                    </Pressable>
+                  )}
+                </View>
+              )}
+
+              {(previewUri || selectedImages.length > 0) && (
+                <View style={styles.imageBtnGroup}>
+                  <Pressable style={styles.removeImgBtn} onPress={() => void handlePickImage()}>
+                    <Ionicons name="add-circle-outline" size={14} color="#2563EB" />
+                    <Text style={styles.removeImgText} numberOfLines={1}>Add Photos</Text>
+                  </Pressable>
+                  {selectedImages.length > 0 && (
+                    <Pressable style={styles.removeImgBtn} onPress={handleClearAll}>
+                      <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                      <Text style={[styles.removeImgText, { color: '#EF4444' }]}>Clear All</Text>
+                    </Pressable>
+                  )}
+                </View>
               )}
               {errors.coverImageUrl ? <Text style={styles.fieldError}>{errors.coverImageUrl}</Text> : null}
             </View>
@@ -872,7 +953,6 @@ export function EventForm({
                 />
               </View>
 
-              {/* Visual date preview if both are valid */}
               {parseDateTimeInput(dateTimeInput) && parseDateTimeInput(deadlineInput) &&
                 isFutureIsoDate(parseDateTimeInput(dateTimeInput)) &&
                 isFutureIsoDate(parseDateTimeInput(deadlineInput)) && (
@@ -886,7 +966,7 @@ export function EventForm({
                     <View style={styles.datePreviewRow}>
                       <Ionicons name="checkmark-circle" size={15} color="#10B981" />
                       <Text style={styles.datePreviewText}>
-                        Deadline: {new Date(parseDateTimeInput(deadlineInput)).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
+                        Registration: {new Date(parseDateTimeInput(deadlineInput)).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
                       </Text>
                     </View>
                   </View>
@@ -904,7 +984,6 @@ export function EventForm({
         {/* ══ STEP 2: REVIEW ══ */}
         {step === 2 && (
           <View style={styles.stepContent}>
-            {/* Cover preview */}
             {previewUri ? (
               <View style={styles.reviewCoverWrap}>
                 <Image contentFit="cover" source={{ uri: previewUri }} style={styles.reviewCover} transition={150} />
@@ -925,7 +1004,6 @@ export function EventForm({
               </View>
             )}
 
-            {/* Details review */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Review Details</Text>
               <View style={styles.reviewGrid}>
@@ -942,12 +1020,11 @@ export function EventForm({
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Schedule</Text>
               <View style={styles.reviewGrid}>
-                <ReviewRow icon="calendar-outline" label="Event Date" value={dateTimeInput || '—'} color="#60A5FA" />
-                <ReviewRow icon="time-outline" label="Registration Closes" value={deadlineInput || '—'} color="#EF4444" />
+                <ReviewRow icon="calendar-outline" label="Event Date" value={dateTimeInput ? new Date(parseDateTimeInput(dateTimeInput) || '').toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—'} color="#60A5FA" />
+                <ReviewRow icon="time-outline" label="Registration Closes" value={deadlineInput ? new Date(parseDateTimeInput(deadlineInput) || '').toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—'} color="#EF4444" />
               </View>
             </View>
 
-            {/* Description preview */}
             {values.description.trim() ? (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Description</Text>
@@ -955,7 +1032,6 @@ export function EventForm({
               </View>
             ) : null}
 
-            {/* Global error */}
             {errorMessage ? (
               <View style={styles.errorCard}>
                 <View style={styles.errorCardIcon}>
@@ -986,12 +1062,11 @@ export function EventForm({
 const styles = StyleSheet.create({
   root: { flex: 1, gap: spacing.lg },
 
-  // Progress bar
   progress: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xxs,
   },
   progressItem: { flex: 1, alignItems: 'center', position: 'relative' },
   progressDot: {
@@ -1007,14 +1082,13 @@ const styles = StyleSheet.create({
   progressLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: '#94A3B8', textAlign: 'center' },
   progressLabelActive: { fontFamily: 'Inter_600SemiBold', color: colors.primary },
   progressLine: {
-    position: 'absolute', top: 17, left: '62%', right: '-38%',
+    position: 'absolute', top: 17, left: '66.5%', right: '-33.5%',
     height: 2, backgroundColor: '#E2E8F0',
   },
   progressLineDone: { backgroundColor: '#10B981' },
 
   stepContent: { gap: spacing.lg },
 
-  // Section card
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: radius.xl,
@@ -1025,10 +1099,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
   },
-  sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#0F172A' },
+  sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#0F172A' },
   sectionSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8', marginTop: -8 },
 
-  // Cover image
   coverZone: {
     borderRadius: radius.xl, overflow: 'hidden',
     backgroundColor: '#F8FAFC',
@@ -1052,16 +1125,46 @@ const styles = StyleSheet.create({
   },
   coverPlaceholderTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.primary },
   coverPlaceholderSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8' },
+
+  galleryContainer: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingBottom: 10,
+  },
+  arrowBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0',
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: 10,
+  },
+  galleryScroll: { flex: 1, height: 70 },
+  galleryScrollContent: { alignItems: 'flex-end' },
+  galleryThumbWrap: {
+    width: 60, marginRight: spacing.sm,
+    position: 'relative',
+  },
+  galleryThumbnail: {
+    width: 60, height: 60, borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: '#F8FAFC', borderWidth: 2, borderColor: '#E2E8F0',
+  },
+  galleryThumbnailActive: { borderColor: colors.primary, borderWidth: 3 },
+  galleryThumbImage: { width: '100%', height: '100%' },
+  galleryThumbRemoveBtn: {
+    position: 'absolute', top: -4, right: -4,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: '#EF4444',
+    alignItems: 'center', justifyContent: 'center',
+    zIndex: 10,
+  },
+  imageBtnGroup: { flexDirection: 'row', gap: spacing.xs },
   removeImgBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'center',
-    backgroundColor: '#FFF5F5', borderRadius: radius.full,
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderWidth: 1, borderColor: '#FECACA',
+    flex: 1, justifyContent: 'center',
+    backgroundColor: '#F8FAFC', borderRadius: radius.md,
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderWidth: 1, borderColor: '#E2E8F0',
   },
-  removeImgText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#EF4444' },
+  removeImgText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#2563EB' },
 
-  // Category chips
   fieldWrap: { gap: 0 },
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: 4 },
   catChip: {
@@ -1075,7 +1178,6 @@ const styles = StyleSheet.create({
 
   fieldError: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.error, marginTop: 4 },
 
-  // Schedule hints
   hintBox: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
     backgroundColor: '#EFF6FF', borderRadius: radius.md,
@@ -1096,10 +1198,7 @@ const styles = StyleSheet.create({
     paddingRight: spacing.md,
     overflow: 'hidden',
   },
-  pickerFieldError: {
-    borderColor: colors.error,
-    backgroundColor: '#FFF5F5',
-  },
+  pickerFieldError: { borderColor: colors.error, backgroundColor: '#FFF5F5' },
   pickerFieldIconWrap: {
     width: 48,
     alignSelf: 'stretch',
@@ -1108,10 +1207,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: '#E2E8F0',
   },
-  pickerFieldIconWrapError: {
-    borderRightColor: '#FECACA',
-    backgroundColor: '#FFF0F0',
-  },
+  pickerFieldIconWrapError: { borderRightColor: '#FECACA', backgroundColor: '#FFF0F0' },
   pickerFieldValue: {
     flex: 1,
     fontFamily: 'Inter_400Regular',
@@ -1119,9 +1215,7 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     paddingHorizontal: spacing.md,
   },
-  pickerFieldValueFilled: {
-    color: '#0F172A',
-  },
+  pickerFieldValueFilled: { color: '#0F172A' },
   pickerModalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(15,23,42,0.45)',
@@ -1150,23 +1244,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingTop: spacing.xs,
   },
-  pickerHeaderText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
-    color: '#334155',
-  },
-  pickerDoneBtn: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  pickerDoneText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
-    color: colors.primary,
-  },
-  pickerContainer: {
-    backgroundColor: '#FFFFFF',
-  },
+  pickerHeaderText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#334155' },
+  pickerDoneBtn: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  pickerDoneText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: colors.primary },
+  pickerContainer: { backgroundColor: '#FFFFFF' },
   datePreview: {
     backgroundColor: '#ECFDF5', borderRadius: radius.md,
     borderWidth: 1, borderColor: '#A7F3D0',
@@ -1175,7 +1256,6 @@ const styles = StyleSheet.create({
   datePreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   datePreviewText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#065F46', flex: 1 },
 
-  // Review step
   reviewCoverWrap: { borderRadius: radius.xl, overflow: 'hidden', height: 160 },
   reviewCover: { width: '100%', height: '100%' },
   reviewCoverLabel: {
@@ -1193,7 +1273,6 @@ const styles = StyleSheet.create({
   reviewGrid: { gap: 14 },
   reviewDesc: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#475569', lineHeight: 22 },
 
-  // Error card
   errorCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     backgroundColor: '#FEF2F2', borderRadius: radius.xl,

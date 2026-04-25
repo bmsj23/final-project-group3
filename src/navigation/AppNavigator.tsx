@@ -4,9 +4,9 @@ import { CreateEventScreen } from '../features/events/screens/CreateEventScreen'
 import { TermsPolicyScreen } from '../features/auth/screens/TermsPolicyScreen';
 import { EditEventScreen } from '../features/events/screens/EditEventScreen';
 import { EventDetailScreen } from '../features/events/screens/EventDetailScreen';
-import { EditProfileScreen } from '../features/profile/screens/EditProfileScreen';
-import { HelpScreen } from '../features/profile/screens/HelpScreen';
-import { PrivacyScreen } from '../features/profile/screens/PrivacyScreen';
+import { EditProfileScreen } from '../features/profile/edit-profile/EditProfileScreen';
+import { HelpScreen } from '../features/profile/help/HelpScreen';
+import { PrivacyScreen } from '../features/profile/privacy/PrivacyScreen';
 import { NotificationScreen } from '../features/notifications/screens/NotificationScreen';
 import { colors } from '../theme/colors';
 import { fontFamily } from '../theme/typography';
