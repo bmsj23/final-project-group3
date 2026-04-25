@@ -12,6 +12,7 @@ import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { FavoritesProvider } from './src/features/events/FavoritesProvider';
 import { configureNotifications } from './src/features/notifications/service';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { AppSessionProvider } from './src/providers/AppSessionProvider';
@@ -45,10 +46,12 @@ export default function App() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <AppSessionProvider>
-          <View style={styles.root} onLayout={onLayoutRootView}>
-            <StatusBar style="dark" />
-            <RootNavigator />
-          </View>
+          <FavoritesProvider>
+            <View style={styles.root} onLayout={onLayoutRootView}>
+              <StatusBar style="dark" />
+              <RootNavigator />
+            </View>
+          </FavoritesProvider>
         </AppSessionProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

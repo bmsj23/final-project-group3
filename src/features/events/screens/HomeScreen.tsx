@@ -3,6 +3,7 @@ import type { AppTabScreenProps } from '../../../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,6 +20,7 @@ import { DarkHero } from '../../../components/ui/DarkHero';
 import { EmptyStateCard } from '../../../components/ui/EmptyStateCard';
 import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { SectionHeader } from '../../../components/ui/SectionHeader';
+import { useEventFavorites } from '../FavoritesProvider';
 import { useAppSession } from '../../../providers/AppSessionProvider';
 import { colors } from '../../../theme/colors';
 import { layout } from '../../../theme/layout';
@@ -34,7 +36,8 @@ import type { EventCategorySummary, EventSummary } from '../types';
 type HomeScreenProps = AppTabScreenProps<'Home'>;
 
 export function HomeScreen({ navigation }: HomeScreenProps) {
-  const { profile } = useAppSession();
+  const { isGuest, profile } = useAppSession();
+  const { isFavorited, refreshFavorites, toggleFavorite } = useEventFavorites();
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [categories, setCategories] = useState<EventCategorySummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,8 +93,19 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         hasFetched.current = true;
         void loadFeed();
       }
-    }, [loadFeed]),
+      if (!isGuest && profile?.id) {
+        void refreshFavorites();
+      }
+    }, [isGuest, loadFeed, profile?.id, refreshFavorites]),
   );
+
+  const handleToggleFavorite = useCallback(async (eventId: string) => {
+    try {
+      await toggleFavorite(eventId);
+    } catch (error) {
+      Alert.alert('Unable to save event', error instanceof Error ? error.message : 'Please try again.');
+    }
+  }, [toggleFavorite]);
 
   const categoryNameById = useMemo(
     () => new Map(categories.map((c) => [c.id, c.name])),
@@ -188,7 +202,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                           key={event.id}
                           categoryName={categoryNameById.get(event.categoryId)}
                           event={event}
+                          isFavorited={isFavorited(event.id)}
                           onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
+                          onToggleFavorite={() => void handleToggleFavorite(event.id)}
                         />
                       ))}
                     </View>
@@ -222,7 +238,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                           key={event.id}
                           categoryName={categoryNameById.get(event.categoryId)}
                           event={event}
+                          isFavorited={isFavorited(event.id)}
                           onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
+                          onToggleFavorite={() => void handleToggleFavorite(event.id)}
                           variant="featured"
                         />
                       ))}

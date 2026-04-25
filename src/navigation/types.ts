@@ -12,6 +12,7 @@ export type AuthStackParamList = {
 export type AppTabParamList = {
   Home: undefined;
   Explore: undefined;
+  Saved: undefined;
   MyEvents: undefined;
   Profile: undefined;
 };
@@ -21,6 +22,7 @@ export type AppStackParamList = {
   CreateEvent: undefined;
   EventDetail: { eventId: string };
   EditEvent: { eventId: string };
+  AdminUsers: undefined;
   Notifications: undefined;
   EditProfile: undefined;
   Privacy: undefined;
