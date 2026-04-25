@@ -272,8 +272,6 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             </View>
           </View>
 
-          <View style={styles.divider} />
-
           {/* Detail rows */}
           <Text style={styles.sectionTitle}>Event Details</Text>
           <View style={styles.detailCard}>
