@@ -17,11 +17,13 @@ type QuickAction = {
 
 type ProfileAuthenticatedContentProps = {
   memberSince: string;
+  onAdminPanel: () => void;
   onCreateEvent: () => void;
   onExplore: () => void;
   onMenuPress: (action: ProfileMenuAction) => void;
   onMyEvents: () => void;
   onNotifications: () => void;
+  onSaved: () => void;
   onSignOut: () => void;
   profile: ProfileRecord | null;
   roleLabel: string;
@@ -29,11 +31,13 @@ type ProfileAuthenticatedContentProps = {
 
 export function ProfileAuthenticatedContent({
   memberSince,
+  onAdminPanel,
   onCreateEvent,
   onExplore,
   onMenuPress,
   onMyEvents,
   onNotifications,
+  onSaved,
   onSignOut,
   profile,
   roleLabel,
@@ -42,7 +46,11 @@ export function ProfileAuthenticatedContent({
     { icon: 'calendar', label: 'My Events', color: '#60A5FA', onPress: onMyEvents },
     { icon: 'add-circle', label: 'Create', color: '#34D399', onPress: onCreateEvent },
     { icon: 'compass', label: 'Explore', color: '#FBBF24', onPress: onExplore },
+    { icon: 'heart', label: 'Saved', color: '#FB7185', onPress: onSaved },
     { icon: 'notifications', label: 'Alerts', color: '#A78BFA', onPress: onNotifications },
+    ...(profile?.role === 'admin'
+      ? [{ icon: 'shield' as const, label: 'Admin', color: '#60A5FA', onPress: onAdminPanel }]
+      : []),
   ];
 
   const accountInfo = [

@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { MyEventsScreen } from '../features/bookings/screens/MyEventsScreen';
 import { ExploreScreen } from '../features/events/screens/ExploreScreen';
 import { HomeScreen } from '../features/events/screens/HomeScreen';
+import { SavedEventsScreen } from '../features/events/screens/SavedEventsScreen';
 import { ProfileScreen } from '../features/profile/profile/ProfileScreen';
 import { colors } from '../theme/colors';
 import { fontFamily } from '../theme/typography';
@@ -15,6 +16,7 @@ const Tab = createBottomTabNavigator<AppTabParamList>();
 const TAB_ICONS: Record<keyof AppTabParamList, keyof typeof Ionicons.glyphMap> = {
   Home: 'home',
   Explore: 'compass',
+  Saved: 'heart',
   MyEvents: 'calendar',
   Profile: 'person',
 };
@@ -22,6 +24,7 @@ const TAB_ICONS: Record<keyof AppTabParamList, keyof typeof Ionicons.glyphMap> =
 const TAB_ICONS_OUTLINE: Record<keyof AppTabParamList, keyof typeof Ionicons.glyphMap> = {
   Home: 'home-outline',
   Explore: 'compass-outline',
+  Saved: 'heart-outline',
   MyEvents: 'calendar-outline',
   Profile: 'person-outline',
 };
@@ -77,6 +80,14 @@ export function AppTabsNavigator() {
         options={{
           headerShown: false,
           tabBarIcon: ({ focused, color }) => <TabIcon color={color} focused={focused} name="Explore" />,
+        }}
+      />
+      <Tab.Screen
+        component={SavedEventsScreen}
+        name="Saved"
+        options={{
+          headerShown: false,
+          tabBarIcon: ({ focused, color }) => <TabIcon color={color} focused={focused} name="Saved" />,
         }}
       />
       <Tab.Screen

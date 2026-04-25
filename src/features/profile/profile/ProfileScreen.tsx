@@ -136,11 +136,13 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
             ) : (
               <ProfileAuthenticatedContent
                 memberSince={memberSince}
+                onAdminPanel={() => navigation.navigate('AdminUsers')}
                 onCreateEvent={() => navigation.navigate('CreateEvent')}
                 onExplore={() => navigation.navigate('Explore')}
                 onMenuPress={handleMenuPress}
                 onMyEvents={() => navigation.navigate('MyEvents')}
                 onNotifications={() => navigation.navigate('Notifications')}
+                onSaved={() => navigation.navigate('Saved')}
                 onSignOut={handleSignOut}
                 profile={profile}
                 roleLabel={roleMeta.label}
