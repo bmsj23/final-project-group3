@@ -277,12 +277,12 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
           </View>
 
           {/* Organizer */}
+          <Text style={styles.sectionTitle}>Event Organizer</Text>
           <View style={styles.organizerCard}>
             <View style={styles.organizerAvatar}>
               <Ionicons name="person" size={22} color={colors.primary} />
             </View>
             <View style={styles.organizerInfo}>
-              <Text style={styles.organizerName}>Event Organizer</Text>
               <Text style={styles.organizerRole}>
                 {isOwner ? '✦ You created this event' : 'Hosted by an Eventure organizer'}
               </Text>
