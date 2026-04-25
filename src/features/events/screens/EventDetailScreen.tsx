@@ -276,6 +276,17 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             ))}
           </View>
 
+          {/* Spots available */}
+          <View style={styles.spotsSection}>
+            <View style={styles.spotsHeader}>
+              <Text style={styles.spotsLabel}>Spots available</Text>
+              <Text style={styles.spotsCount}>{event.remainingSlots} / {event.capacity} remaining</Text>
+            </View>
+            <View style={styles.spotsTrack}>
+              <View style={[styles.spotsFill, { width: `${event.capacity > 0 ? (event.remainingSlots / event.capacity) * 100 : 0}%` }]} />
+            </View>
+          </View>
+
           {/* Organizer */}
           <Text style={styles.sectionTitle}>Event Organizer</Text>
           <View style={styles.organizerCard}>
@@ -466,6 +477,13 @@ const styles = StyleSheet.create({
     borderRadius: 14, borderWidth: 1, borderColor: '#A7F3D0',
   },
   ownerBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#059669' },
+
+  spotsSection: { gap: 8 },
+  spotsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  spotsLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#6B7280' },
+  spotsCount: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#6B7280' },
+  spotsTrack: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden' },
+  spotsFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 3 },
 
   noticeCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
