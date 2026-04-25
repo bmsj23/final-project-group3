@@ -1,5 +1,5 @@
 import { supabase, supabaseConfig } from '../../lib/supabase/client';
-import type { CategoryRecord, EventRecord } from '../../lib/supabase/types';
+import type { CategoryRecord, EventFavoriteRecord, EventRecord } from '../../lib/supabase/types';
 import {
   EVENT_IMAGE_MAX_BYTES,
   EVENT_IMAGE_MAX_SIZE_LABEL,
@@ -13,6 +13,7 @@ import type {
   EventFormValues,
   EventImageAsset,
   EventImageUploadResult,
+  EventStatus,
   EventSummary,
 } from './types';
 
@@ -151,6 +152,75 @@ export async function fetchMyCreatedEvents(organizerId: string) {
   };
 }
 
+export async function fetchMyFavoriteEventIds(userId: string) {
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from('event_favorites')
+    .select('event_id, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  return {
+    data: data?.map((record) => record.event_id) ?? [],
+    error,
+  };
+}
+
+export async function addFavoriteEvent(userId: string, eventId: string) {
+  const client = requireSupabase();
+  return client
+    .from('event_favorites')
+    .insert({
+      user_id: userId,
+      event_id: eventId,
+    })
+    .select('id, user_id, event_id, created_at')
+    .single<EventFavoriteRecord>();
+}
+
+export async function removeFavoriteEvent(userId: string, eventId: string) {
+  const client = requireSupabase();
+  return client
+    .from('event_favorites')
+    .delete()
+    .eq('user_id', userId)
+    .eq('event_id', eventId);
+}
+
+export async function fetchEventsByIds(eventIds: string[]) {
+  const client = requireSupabase();
+
+  if (eventIds.length === 0) {
+    return { data: [] as EventSummary[], error: null };
+  }
+
+  const { data, error } = await client
+    .from('events')
+    .select('*')
+    .in('id', eventIds);
+
+  const order = new Map(eventIds.map((id, index) => [id, index]));
+  const orderedEvents = (data ?? []).sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
+
+  return {
+    data: orderedEvents.map(mapEvent),
+    error,
+  };
+}
+
+export async function fetchMyFavoritedEvents(userId: string) {
+  const { data: favoriteIds, error } = await fetchMyFavoriteEventIds(userId);
+
+  if (error) {
+    return {
+      data: [] as EventSummary[],
+      error,
+    };
+  }
+
+  return fetchEventsByIds(favoriteIds);
+}
+
 export async function fetchEventById(eventId: string) {
   const client = requireSupabase();
   const { data, error } = await client
@@ -220,6 +290,16 @@ export async function updateOwnEvent(eventId: string, values: EventFormValues) {
     data,
     error,
   };
+}
+
+export async function updateEventStatus(eventId: string, status: EventStatus) {
+  const client = requireSupabase();
+  return client
+    .from('events')
+    .update({ status })
+    .eq('id', eventId)
+    .select('*')
+    .single<EventRecord>();
 }
 
 export async function deleteOwnEvent(eventId: string) {

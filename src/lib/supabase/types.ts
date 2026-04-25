@@ -40,6 +40,13 @@ export type EventRecord = {
   updated_at: string;
 };
 
+export type EventFavoriteRecord = {
+  id: string;
+  user_id: string;
+  event_id: string;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -124,6 +131,22 @@ export type Database = {
           is_flagged?: boolean;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      event_favorites: {
+        Row: EventFavoriteRecord;
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_id?: string;
+          created_at?: string;
         };
         Relationships: [];
       };

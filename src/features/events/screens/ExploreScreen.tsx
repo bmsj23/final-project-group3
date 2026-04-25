@@ -2,12 +2,14 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { AppTabScreenProps } from '../../../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 import { DarkHero } from '../../../components/ui/DarkHero';
 import { EmptyStateCard } from '../../../components/ui/EmptyStateCard';
 import { ScreenContainer } from '../../../components/ui/ScreenContainer';
+import { useEventFavorites } from '../FavoritesProvider';
+import { useAppSession } from '../../../providers/AppSessionProvider';
 import { colors } from '../../../theme/colors';
 import { layout } from '../../../theme/layout';
 import { radius } from '../../../theme/radius';
@@ -21,6 +23,8 @@ import type { EventCategorySummary, EventSummary } from '../types';
 type ExploreScreenProps = AppTabScreenProps<'Explore'>;
 
 export function ExploreScreen({ navigation }: ExploreScreenProps) {
+  const { isGuest, profile } = useAppSession();
+  const { isFavorited, refreshFavorites, toggleFavorite } = useEventFavorites();
   const [categories, setCategories] = useState<EventCategorySummary[]>([]);
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -61,8 +65,19 @@ export function ExploreScreen({ navigation }: ExploreScreenProps) {
         hasFetched.current = true;
         void loadExplore();
       }
-    }, [loadExplore]),
+      if (!isGuest && profile?.id) {
+        void refreshFavorites();
+      }
+    }, [isGuest, loadExplore, profile?.id, refreshFavorites]),
   );
+
+  const handleToggleFavorite = useCallback(async (eventId: string) => {
+    try {
+      await toggleFavorite(eventId);
+    } catch (error) {
+      Alert.alert('Unable to save event', error instanceof Error ? error.message : 'Please try again.');
+    }
+  }, [toggleFavorite]);
 
   const categoryNameById = useMemo(
     () => new Map(categories.map((category) => [category.id, category.name])),
@@ -152,7 +167,9 @@ export function ExploreScreen({ navigation }: ExploreScreenProps) {
                       key={event.id}
                       categoryName={categoryNameById.get(event.categoryId)}
                       event={event}
+                      isFavorited={isFavorited(event.id)}
                       onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
+                      onToggleFavorite={() => void handleToggleFavorite(event.id)}
                     />
                   ))}
                 </View>

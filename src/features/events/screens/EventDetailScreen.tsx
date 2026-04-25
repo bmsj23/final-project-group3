@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { isAdminRole } from '../../auth/contracts';
+import { useEventFavorites } from '../FavoritesProvider';
 import { useAppSession } from '../../../providers/AppSessionProvider';
 import type { AppStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
@@ -26,6 +28,7 @@ import {
   deleteEventImageFromPublicUrl,
   deleteOwnEvent,
   fetchEventById,
+  updateEventStatus,
 } from '../api';
 import { formatEventDateTime, formatEventStatus } from '../formatters';
 import type { EventDetail } from '../types';
@@ -41,10 +44,11 @@ const STATUS_COLORS: Record<string, { text: string; bg: string }> = {
 
 export function EventDetailScreen({ navigation, route }: EventDetailScreenProps) {
   const { profile } = useAppSession();
+  const { isFavorited, toggleFavorite } = useEventFavorites();
   const [event, setEvent]         = useState<EventDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isSaved, setIsSaved]     = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const sheetAnim = useRef(new Animated.Value(0)).current;
@@ -69,7 +73,10 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
 
   useFocusEffect(useCallback(() => { void loadEvent(); }, [loadEvent]));
 
+  const isAdmin = isAdminRole(profile?.role);
   const isOwner = profile?.id === event?.organizerId;
+  const canModerate = isOwner || isAdmin;
+  const isSaved = event ? isFavorited(event.id) : false;
   const statusStyle = STATUS_COLORS[event?.status ?? 'upcoming'] ?? STATUS_COLORS.upcoming;
 
   const detailRows = useMemo(() =>
@@ -79,9 +86,21 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
       { icon: 'time-outline'      as const, label: 'Register By', value: formatEventDateTime(event.registrationDeadline) },
     ] : [], [event]);
 
+  const handleToggleSaved = useCallback(async () => {
+    if (!event) {
+      return;
+    }
+
+    try {
+      await toggleFavorite(event.id);
+    } catch (error) {
+      Alert.alert('Unable to save event', error instanceof Error ? error.message : 'Please try again.');
+    }
+  }, [event, toggleFavorite]);
+
   async function handleDelete() {
-    if (!event || !profile || profile.id !== event.organizerId) {
-      Alert.alert('Not allowed', 'Only the event owner can delete this event.');
+    if (!event || !profile || (!isOwner && !isAdmin)) {
+      Alert.alert('Not allowed', 'Only the event owner or an admin can delete this event.');
       return;
     }
     setIsDeleting(true);
@@ -89,10 +108,37 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
       const { error } = await deleteOwnEvent(event.id);
       if (error) throw error;
       if (event.coverImageUrl) await deleteEventImageFromPublicUrl(event.coverImageUrl);
-      navigation.reset({ index: 0, routes: [{ name: 'Tabs', params: { screen: 'MyEvents' } }] });
+      if (isOwner) {
+        navigation.reset({ index: 0, routes: [{ name: 'Tabs', params: { screen: 'MyEvents' } }] });
+      } else {
+        navigation.goBack();
+      }
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Could not delete event.');
       setIsDeleting(false);
+    }
+  }
+
+  async function handleCancelEvent() {
+    if (!event || !profile || !canModerate) {
+      Alert.alert('Not allowed', 'Only the event owner or an admin can cancel this event.');
+      return;
+    }
+
+    if (event.status === 'cancelled') {
+      Alert.alert('Already cancelled', 'This event is already cancelled.');
+      return;
+    }
+
+    setIsCancelling(true);
+    try {
+      const { error } = await updateEventStatus(event.id, 'cancelled');
+      if (error) throw error;
+      setEvent((current) => current ? { ...current, status: 'cancelled' } : current);
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Could not cancel event.');
+    } finally {
+      setIsCancelling(false);
     }
   }
 
@@ -212,10 +258,10 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             <Pressable
               accessibilityRole="button"
               style={({ pressed }) => [styles.overlayBtn, pressed && styles.overlayBtnPressed]}
-              onPress={() => setIsSaved(v => !v)}
+              onPress={() => void handleToggleSaved()}
             >
-              <Ionicons
-                name={isSaved ? 'heart' : 'heart-outline'}
+                <Ionicons
+                  name={isSaved ? 'heart' : 'heart-outline'}
                 size={22}
                 color={isSaved ? '#FF3CAC' : '#fff'}
               />

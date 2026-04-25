@@ -4,6 +4,7 @@ import { CreateEventScreen } from '../features/events/screens/CreateEventScreen'
 import { TermsPolicyScreen } from '../features/auth/screens/TermsPolicyScreen';
 import { EditEventScreen } from '../features/events/screens/EditEventScreen';
 import { EventDetailScreen } from '../features/events/screens/EventDetailScreen';
+import { AdminUsersScreen } from '../features/admin/screens/AdminUsersScreen';
 import { EditProfileScreen } from '../features/profile/edit-profile/EditProfileScreen';
 import { HelpScreen } from '../features/profile/help/HelpScreen';
 import { PrivacyScreen } from '../features/profile/privacy/PrivacyScreen';
@@ -28,6 +29,7 @@ export function AppNavigator() {
       <Stack.Screen component={CreateEventScreen} name="CreateEvent" />
       <Stack.Screen component={EventDetailScreen} name="EventDetail" />
       <Stack.Screen component={EditEventScreen} name="EditEvent" />
+      <Stack.Screen component={AdminUsersScreen} name="AdminUsers" />
       <Stack.Screen component={NotificationScreen} name="Notifications" />
       <Stack.Screen component={EditProfileScreen} name="EditProfile" />
       <Stack.Screen component={PrivacyScreen} name="Privacy" />
