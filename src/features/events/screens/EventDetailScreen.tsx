@@ -24,6 +24,7 @@ import { radius } from '../../../theme/radius';
 import { spacing } from '../../../theme/spacing';
 import { layout } from '../../../theme/layout';
 import {
+  cancelOwnEvent,
   deleteEventImageFromPublicUrl,
   deleteOwnEvent,
   fetchEventById,
@@ -35,10 +36,10 @@ import type { EventDetail } from '../types';
 type EventDetailScreenProps = NativeStackScreenProps<AppStackParamList, 'EventDetail'>;
 
 const STATUS_COLORS: Record<string, { text: string; bg: string }> = {
-  upcoming:  { text: '#60A5FA', bg: 'rgba(96,165,250,0.15)'  },
-  ongoing:   { text: '#34D399', bg: 'rgba(52,211,153,0.15)'  },
-  completed: { text: '#94A3B8', bg: 'rgba(148,163,184,0.15)' },
-  cancelled: { text: '#EF4444', bg: 'rgba(239,68,68,0.15)'   },
+  upcoming:  { text: '#3B82F6', bg: 'rgba(59,130,246,0.1)'  },
+  ongoing:   { text: '#10B981', bg: 'rgba(16,185,129,0.1)'  },
+  completed: { text: '#94A3B8', bg: 'rgba(148,163,184,0.1)' },
+  cancelled: { text: '#EF4444', bg: 'rgba(239,68,68,0.1)'   },
 };
 
 export function EventDetailScreen({ navigation, route }: EventDetailScreenProps) {
@@ -60,7 +61,6 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
       if (!data) throw new Error('Event not found or has been removed.');
       setEvent(data);
       setErrorMessage(null);
-      // Animate sheet in
       Animated.spring(sheetAnim, {
         toValue: 1, useNativeDriver: true, tension: 65, friction: 10,
       }).start();
@@ -81,9 +81,9 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
 
   const detailRows = useMemo(() =>
     event ? [
-      { icon: 'location-outline'  as const, label: 'Location',      value: event.location                                  },
-      { icon: 'calendar-outline'  as const, label: 'Date & Time',   value: formatEventDateTime(event.startsAt)            },
-      { icon: 'time-outline'      as const, label: 'Register By',   value: formatEventDateTime(event.registrationDeadline) },
+      { icon: 'location-outline'  as const, label: 'Location',    value: event.location                                  },
+      { icon: 'calendar-outline'  as const, label: 'Date & Time', value: formatEventDateTime(event.startsAt)             },
+      { icon: 'time-outline'      as const, label: 'Register By', value: formatEventDateTime(event.registrationDeadline) },
     ] : [], [event]);
 
   const handleToggleSaved = useCallback(async () => {
@@ -153,13 +153,23 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
     );
   }
 
+  async function handleCancel() {
+    if (!event) return;
+    const { error } = await cancelOwnEvent(event.id);
+    if (error) {
+      Alert.alert('Error', error.message ?? 'Could not cancel event.');
+      return;
+    }
+    setEvent(prev => prev ? { ...prev, status: 'cancelled' } : prev);
+  }
+
   function confirmCancel() {
     Alert.alert(
       'Cancel this event?',
-      'The event status will be set to cancelled for all attendees.',
+      'Registered attendees will be notified. You can re-open the event later by editing it.',
       [
-        { text: 'Keep event', style: 'cancel' },
-        { text: 'Cancel event', style: 'destructive', onPress: () => void handleCancelEvent() },
+        { text: 'Keep Event', style: 'cancel' },
+        { text: 'Cancel Event', style: 'destructive', onPress: () => void handleCancel() },
       ],
     );
   }
@@ -205,10 +215,7 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
   return (
     <SafeAreaView style={styles.root} edges={[]}>
       <StatusBar style="light" />
-      <LinearGradient
-        colors={['#060D1F', '#0F1E3D', '#1E3A8A']}
-        style={StyleSheet.absoluteFill}
-      />
+      <LinearGradient colors={['#060D1F', '#0F1E3D', '#1E3A8A']} style={StyleSheet.absoluteFill} />
 
       <ScrollView
         bounces={false}
@@ -216,7 +223,7 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        {/* ── Hero image ── */}
+        {/* ── Hero ── */}
         <View style={styles.heroWrap}>
           {event.coverImageUrl ? (
             <Image
@@ -236,9 +243,10 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
               </View>
             </LinearGradient>
           )}
-
-
-          {/* Overlay controls */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.35)', 'transparent', 'rgba(0,0,0,0.15)']}
+            style={StyleSheet.absoluteFill}
+          />
           <View style={styles.overlayTop}>
             <Pressable
               accessibilityRole="button"
@@ -249,7 +257,6 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={isSaved ? 'Remove from saved' : 'Save event'}
               style={({ pressed }) => [styles.overlayBtn, pressed && styles.overlayBtnPressed]}
               onPress={() => void handleToggleSaved()}
             >
@@ -260,144 +267,100 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
               />
             </Pressable>
           </View>
-
         </View>
 
-        {/* ── Bottom sheet ── */}
+        {/* ── Sheet ── */}
         <Animated.View
           style={[
             styles.sheet,
             {
               opacity: sheetAnim,
-              transform: [{ translateY: sheetAnim.interpolate({ inputRange:[0,1], outputRange:[50,0] }) }],
+              transform: [{ translateY: sheetAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }],
             },
           ]}
         >
           <View style={styles.grabber} />
 
-          {/* Title + badges */}
-          <View style={styles.sheetTitleBlock}>
-            <View style={styles.heroBadgeRow}>
-              <View style={[styles.heroBadge, { backgroundColor: statusStyle.bg }]}>
-                <View style={[styles.heroBadgeDot, { backgroundColor: statusStyle.text }]} />
-                <Text style={[styles.heroBadgeText, { color: statusStyle.text }]}>
+          {/* Status + category + title */}
+          <View style={styles.titleBlock}>
+            <View style={styles.badgeRow}>
+              <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                <View style={[styles.statusDot, { backgroundColor: statusStyle.text }]} />
+                <Text style={[styles.statusText, { color: statusStyle.text }]}>
                   {formatEventStatus(event.status)}
                 </Text>
               </View>
-              <View style={styles.heroFreeBadge}>
-                <Text style={styles.heroFreeText}>FREE</Text>
-              </View>
               {event.isFlagged && (
                 <View style={styles.flaggedBadge}>
-                  <Ionicons name="flag" size={12} color="#EF4444" />
+                  <Ionicons name="flag" size={11} color="#EF4444" />
                   <Text style={styles.flaggedText}>Flagged</Text>
                 </View>
               )}
-            </View>
-            <Text style={styles.sheetTitle} numberOfLines={3}>{event.title}</Text>
-          </View>
-
-          {/* Category + actions row */}
-          <View style={styles.sheetHeader}>
-            {event.categoryName ? (
-              <View style={styles.categoryPill}>
-                <Ionicons name="pricetag-outline" size={13} color="#1E3A8A" />
-                <Text style={styles.categoryText}>{event.categoryName}</Text>
-              </View>
-            ) : <View />}
-
-            <View style={styles.sheetActions}>
-              <Pressable
-                style={({ pressed }) => [styles.actionIconBtn, pressed && { opacity: 0.6 }]}
-                onPress={() => void handleToggleSaved()}
-              >
-                <Ionicons name={isSaved ? 'heart' : 'heart-outline'} size={20} color={isSaved ? '#EF4444' : '#6B7280'} />
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.actionIconBtn, pressed && { opacity: 0.6 }]}
-                onPress={() => Alert.alert('Share', 'Sharing feature coming soon!')}
-              >
-                <Ionicons name="share-outline" size={20} color="#6B7280" />
-              </Pressable>
-              {canModerate && (
-                <>
-                  {isOwner ? (
-                    <Pressable
-                      style={({ pressed }) => [styles.actionIconBtn, pressed && { opacity: 0.6 }]}
-                      onPress={() => navigation.navigate('EditEvent', { eventId: event.id })}
-                    >
-                      <Ionicons name="pencil" size={20} color="#6B7280" />
-                    </Pressable>
-                  ) : null}
-                  <Pressable
-                    style={({ pressed }) => [styles.actionIconBtn, pressed && { opacity: 0.6 }]}
-                    onPress={confirmCancel}
-                  >
-                    <Ionicons
-                      color={event.status === 'cancelled' || isCancelling ? '#9CA3AF' : '#F59E0B'}
-                      name="close-circle-outline"
-                      size={20}
-                    />
-                  </Pressable>
-                  <Pressable
-                    style={({ pressed }) => [styles.actionIconBtn, pressed && { opacity: 0.6 }]}
-                    onPress={confirmDelete}
-                  >
-                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                  </Pressable>
-                </>
-              )}
-            </View>
-          </View>
-
-
-          {/* ── Detail rows ── */}
-          <View style={styles.detailSection}>
-            <Text style={styles.sectionHeader}>Event Details</Text>
-            <View style={styles.detailCard}>
-              {detailRows.map((row, i) => (
-                <View
-                  key={row.label}
-                  style={styles.detailRow}
-                >
-                  <View style={styles.detailIconWrap}>
-                    <Ionicons name={row.icon} size={18} color="#1E3A8A" />
-                  </View>
-                  <View style={styles.detailText}>
-                    <Text style={styles.detailLabel}>{row.label}</Text>
-                    <Text style={styles.detailValue}>{row.value}</Text>
-                  </View>
+              {event.categoryName ? (
+                <View style={styles.categoryPill}>
+                  <Ionicons name="pricetag-outline" size={10} color={colors.primary} />
+                  <Text style={styles.categoryText}>{event.categoryName}</Text>
                 </View>
-              ))}
+              ) : null}
             </View>
+            <Text style={styles.title} numberOfLines={3}>{event.title}</Text>
           </View>
 
-          {/* ── Organizer card ── */}
-          <View style={styles.organizerSection}>
-            <Text style={styles.sectionHeader}>Organizer</Text>
-            <View style={styles.organizerCard}>
-              <View style={styles.organizerAvatar}>
-                <Ionicons name="person" size={24} color="#1E3A8A" />
-              </View>
-              <View style={styles.organizerInfo}>
-                <Text style={styles.organizerName}>Event Organizer</Text>
-                <Text style={styles.organizerRole}>
-                  {isOwner ? '✦ You created this event' : 'Hosted by an Eventure organizer'}
-                </Text>
-              </View>
-              {canModerate && (
-                <View style={styles.ownerBadge}>
-                  <Text style={styles.ownerBadgeText}>{isOwner ? 'Owner' : 'Admin'}</Text>
+          {/* Actions */}
+          <View style={styles.metaRow}>
+            <View style={styles.actionRow} />
+          </View>
+
+          {/* Detail rows */}
+          <Text style={styles.sectionTitle}>Event Details</Text>
+          <View style={styles.detailCard}>
+            {detailRows.map((row) => (
+              <View key={row.label} style={styles.detailRow}>
+                <View style={styles.detailIconWrap}>
+                  <Ionicons name={row.icon} size={17} color={colors.primary} />
                 </View>
-              )}
+                <View style={styles.detailText}>
+                  <Text style={styles.detailLabel}>{row.label}</Text>
+                  <Text style={styles.detailValue}>{row.value}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* Spots available */}
+          <View style={styles.spotsSection}>
+            <View style={styles.spotsHeader}>
+              <Text style={styles.spotsLabel}>Spots available</Text>
+              <Text style={styles.spotsCount}>{event.remainingSlots} / {event.capacity} remaining</Text>
+            </View>
+            <View style={styles.spotsTrack}>
+              <View style={[styles.spotsFill, { width: `${event.capacity > 0 ? (event.remainingSlots / event.capacity) * 100 : 0}%` }]} />
             </View>
           </View>
 
-          {/* ── Missing cover image notice (owner only) ── */}
-          {canModerate && !event.coverImageUrl && (
+          {/* Organizer */}
+          <Text style={styles.sectionTitle}>Event Organizer</Text>
+          <View style={styles.organizerCard}>
+            <View style={styles.organizerAvatar}>
+              <Ionicons name="person" size={22} color={colors.primary} />
+            </View>
+            <View style={styles.organizerInfo}>
+              <Text style={styles.organizerRole}>
+                {isOwner ? '✦ You created this event' : 'Hosted by an Eventure organizer'}
+              </Text>
+            </View>
+            {isOwner && (
+              <View style={styles.ownerBadge}>
+                <Text style={styles.ownerBadgeText}>Owner</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Missing cover image notice (owner only) */}
+          {isOwner && !event.coverImageUrl && (
             <View style={styles.noticeCard}>
               <View style={styles.noticeIcon}>
-                <Ionicons name="image-outline" size={22} color="#F59E0B" />
+                <Ionicons name="image-outline" size={20} color="#F59E0B" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.noticeTitle}>Add a cover image</Text>
@@ -406,13 +369,13 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             </View>
           )}
 
-          {/* ── Description ── */}
+          {/* Description */}
           <View style={styles.descSection}>
             <Text style={styles.sectionTitle}>About this event</Text>
             <Text style={styles.description}>{event.description}</Text>
           </View>
 
-          {/* ── Tags ── */}
+          {/* Tags */}
           {event.tags.length > 0 && (
             <View style={styles.tagsSection}>
               <Text style={styles.sectionTitle}>Tags</Text>
@@ -426,21 +389,51 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             </View>
           )}
 
+          {/* Delete — owner only */}
+          {isOwner && (
+            <Pressable
+              style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.88 }]}
+              onPress={confirmDelete}
+            >
+              <Ionicons name="trash-outline" size={19} color="#EF4444" />
+              <Text style={styles.deleteBtnText}>Delete Event</Text>
+            </Pressable>
+          )}
         </Animated.View>
       </ScrollView>
 
       {/* ── Sticky footer ── */}
-      {!canModerate ? (
-        <View style={styles.stickyFooter}>
+      <View style={styles.stickyFooter}>
+        {isOwner ? (
+          <View style={styles.ownerFooterRow}>
+            <Pressable
+              style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.88 }, event.status === 'cancelled' && styles.cancelBtnDisabled]}
+              onPress={confirmCancel}
+              disabled={event.status === 'cancelled'}
+            >
+              <Ionicons name="close-circle-outline" size={19} color={event.status === 'cancelled' ? '#9CA3AF' : '#EF4444'} />
+              <Text style={[styles.cancelBtnText, event.status === 'cancelled' && styles.cancelBtnTextDisabled]}>
+                {event.status === 'cancelled' ? 'Cancelled' : 'Cancel Event'}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.editBtn, pressed && { opacity: 0.88 }]}
+              onPress={() => navigation.navigate('EditEvent', { eventId: event.id })}
+            >
+              <Ionicons name="pencil" size={19} color="#fff" />
+              <Text style={styles.editBtnText}>Edit Event</Text>
+            </Pressable>
+          </View>
+        ) : (
           <Pressable
-            style={({ pressed }) => [styles.bookBtn, pressed && styles.bookBtnPressed]}
+            style={({ pressed }) => [styles.bookBtn, pressed && { opacity: 0.88 }]}
             onPress={() => Alert.alert('Booking', 'Booking feature coming soon! 🎟️')}
           >
             <Ionicons name="ticket-outline" size={20} color="#fff" />
             <Text style={styles.bookBtnText}>Register Now</Text>
           </Pressable>
-        </View>
-      ) : null}
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -449,7 +442,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#060D1F' },
   scroll: { flexGrow: 1 },
 
-  // Loading / error states
   centerState: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: layout.screenPaddingH, gap: 12,
@@ -467,195 +459,139 @@ const styles = StyleSheet.create({
   },
   backBtnStateText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#CBD5E1' },
 
-  // Hero
-  heroWrap: { height: 380, position: 'relative' },
+  heroWrap: { height: 340, position: 'relative' },
   heroImage: { width: '100%', height: '100%' },
   heroPlaceholderIcon: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  heroScrim: { ...StyleSheet.absoluteFillObject },
   overlayTop: {
     position: 'absolute', top: 52, left: 0, right: 0,
     flexDirection: 'row', justifyContent: 'space-between',
     paddingHorizontal: layout.screenPaddingH,
   },
   overlayBtn: {
-    width: 48, height: 48, borderRadius: 24,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.38)',
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2, shadowRadius: 4, elevation: 4,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
   },
-  overlayBtnPressed: { opacity: 0.7, backgroundColor: 'rgba(0,0,0,0.6)' },
-  heroBadgeRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  heroBadge: {
+  overlayBtnPressed: { opacity: 0.7 },
+
+  sheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    marginTop: -24,
+    paddingHorizontal: layout.screenPaddingH,
+    paddingTop: 14,
+    paddingBottom: 40,
+    gap: 20,
+  },
+  grabber: {
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: '#E5E7EB', alignSelf: 'center', marginBottom: 2,
+  },
+
+  titleBlock: { gap: 10 },
+  badgeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
   },
-  heroBadgeDot: { width: 7, height: 7, borderRadius: 4 },
-  heroBadgeText: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase' },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase' },
   flaggedBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: 'rgba(239,68,68,0.1)',
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
   },
   flaggedText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#EF4444' },
-  heroFreeBadge: {
-    alignSelf: 'flex-start', backgroundColor: 'rgba(30,58,138,0.08)',
-    borderWidth: 1, borderColor: 'rgba(30,58,138,0.2)',
+  title: { fontFamily: 'Inter_700Bold', fontSize: 26, color: '#0F172A', lineHeight: 34, letterSpacing: -0.4 },
+
+  metaRow: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  categoryPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(30,58,138,0.07)',
     paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
   },
-  heroFreeText: { fontFamily: 'Inter_700Bold', fontSize: 11, color: '#1E3A8A', letterSpacing: 0.5 },
-  sheetTitleBlock: { gap: 10 },
-  sheetTitle: { fontFamily: 'Inter_800ExtraBold', fontSize: 28, color: '#0F172A', lineHeight: 36, letterSpacing: -0.6 },
-
-  // Sheet
-  sheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32, borderTopRightRadius: 32,
-    marginTop: -28, paddingTop: 16,
-    paddingHorizontal: layout.screenPaddingH,
-    paddingBottom: 48, gap: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.08, shadowRadius: 24, elevation: 16,
-  },
-  grabber: {
-    width: 36, height: 4, borderRadius: 2,
-    backgroundColor: '#E5E7EB', alignSelf: 'center', marginBottom: 4,
-  },
-
-  // Sheet header: category + action icons
-  sheetHeader: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sheetActions: { flexDirection: 'row', gap: 4 },
-  actionIconBtn: {
+  categoryText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: colors.primary, textTransform: 'uppercase', letterSpacing: 0.4 },
+  actionRow: { flexDirection: 'row', gap: 6 },
+  actionBtn: {
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: '#F3F4F6',
     alignItems: 'center', justifyContent: 'center',
   },
 
-  divider: { height: 1, backgroundColor: '#F3F4F6' },
+  divider: { height: 1, backgroundColor: '#F1F5F9' },
 
-  // Category
-  categoryPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(30,58,138,0.07)', borderWidth: 1, borderColor: 'rgba(30,58,138,0.15)',
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
-  },
-  categoryText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#1E3A8A' },
-
-  // Sections
-  sectionHeader: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#111827', marginBottom: 10 },
-  detailSection: { gap: 8 },
-  organizerSection: { gap: 8 },
-
-  // Title section
-  titleSection: { gap: 16 },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm, alignItems: 'flex-start' },
-  titleBlock: { flex: 1, minWidth: 0, gap: 12 },
-  title: { fontFamily: 'Inter_800ExtraBold', fontSize: 28, color: '#1F2937', flex: 1, lineHeight: 36, letterSpacing: -0.5 },
-  freeBadge: { alignSelf: 'flex-start', backgroundColor: '#F3F4F6', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#D1D5DB' },
-  freeText: { fontFamily: 'Inter_700Bold', fontSize: 13, color: '#374151', letterSpacing: 0.5 },
-
-  // Detail card
   detailCard: {
-    backgroundColor: '#FAFAFA', borderRadius: 20,
-    borderWidth: 1, borderColor: '#F3F4F6', overflow: 'hidden',
+    backgroundColor: '#FAFAFA',
+    borderRadius: 18,
+    borderWidth: 1, borderColor: '#F1F5F9',
+    overflow: 'hidden',
   },
-  detailRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
-  detailRowBorder: { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  detailRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 14 },
   detailIconWrap: {
-    width: 44, height: 44, borderRadius: 14,
-    backgroundColor: 'rgba(30,58,138,0.08)', alignItems: 'center', justifyContent: 'center',
+    width: 42, height: 42, borderRadius: 13,
+    backgroundColor: 'rgba(30,58,138,0.08)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  detailText: { flex: 1, gap: 4 },
-  detailLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.8 },
-  detailValue: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#111827', lineHeight: 24 },
+  detailText: { flex: 1, gap: 3 },
+  detailLabel: { fontFamily: 'Inter_500Medium', fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.7 },
+  detailValue: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: '#111827' },
 
-  // Organizer
   organizerCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 16,
-    backgroundColor: '#FAFAFA', borderRadius: 20,
-    borderWidth: 1, borderColor: '#F3F4F6',
-    padding: 18,
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 18, borderWidth: 1, borderColor: '#F1F5F9',
+    padding: 16,
   },
   organizerAvatar: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: 'rgba(30,58,138,0.08)', alignItems: 'center', justifyContent: 'center',
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: 'rgba(30,58,138,0.08)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  organizerInfo: { flex: 1, gap: 4 },
-  organizerName: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#111827' },
-  organizerRole: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#6B7280', lineHeight: 20 },
+  organizerInfo: { flex: 1, gap: 3 },
+  organizerName: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#111827' },
+  organizerRole: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#6B7280' },
   ownerBadge: {
-    backgroundColor: '#ECFDF5', paddingHorizontal: 14, paddingVertical: 6,
-    borderRadius: 18, borderWidth: 1, borderColor: '#A7F3D0',
+    backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 5,
+    borderRadius: 14, borderWidth: 1, borderColor: '#A7F3D0',
   },
-  ownerBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#059669' },
+  ownerBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#059669' },
 
-  // Notice
+  spotsSection: { gap: 8 },
+  spotsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  spotsLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#6B7280' },
+  spotsCount: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#111827' },
+  spotsTrack: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden' },
+  spotsFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 3 },
+
   noticeCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 14,
-    backgroundColor: '#FEF3C7', borderRadius: 20,
-    borderWidth: 1, borderColor: '#FCD34D',
-    padding: 18,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 16, borderWidth: 1, borderColor: '#FDE68A',
+    padding: 16,
   },
   noticeIcon: {
-    width: 44, height: 44, borderRadius: 14,
+    width: 40, height: 40, borderRadius: 12,
     backgroundColor: 'rgba(251,191,36,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
-  noticeTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#92400E' },
-  noticeSub: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#B45309', lineHeight: 22, marginTop: 4 },
+  noticeTitle: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#92400E' },
+  noticeSub: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#B45309', lineHeight: 20, marginTop: 3 },
 
-  // Description + tags
-  descSection: { gap: 12 },
-  tagsSection: { gap: 12 },
-  sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 19, color: '#111827', marginBottom: 8 },
-  description: { fontFamily: 'Inter_400Regular', fontSize: 16, color: '#374151', lineHeight: 26 },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  descSection: { gap: 10 },
+  tagsSection: { gap: 10 },
+  sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#111827' },
+  description: { fontFamily: 'Inter_400Regular', fontSize: 15, color: '#374151', lineHeight: 25 },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tagPill: {
-    backgroundColor: '#F3F4F6', borderRadius: 18,
+    backgroundColor: '#F3F4F6', borderRadius: 14,
     borderWidth: 1, borderColor: '#E5E7EB',
-    paddingHorizontal: 16, paddingVertical: 8,
+    paddingHorizontal: 14, paddingVertical: 7,
   },
-  tagText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#4B5563' },
-
-  // Actions
-  actionsSection: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center', justifyContent: 'center' },
-  ownerActionHint: { flex: 1, padding: 18, backgroundColor: '#F9FAFB', borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB' },
-  ownerActionHintText: { fontFamily: 'Inter_500Medium', fontSize: 15, color: '#6B7280', textAlign: 'center', lineHeight: 22 },
-  cardActions: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  iconAction: {
-    width: 48, height: 48, borderRadius: 20,
-    backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 4,
-  },
-  iconActionPressed: { opacity: 0.8, backgroundColor: '#F3F4F6' },
-  bookmarkBtn: {
-    width: 56, height: 56, borderRadius: 16,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1, borderColor: '#E5E7EB',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  bookmarkBtnActive: { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' },
-
-  ownerActions: { flex: 1, gap: spacing.sm },
-  editBtn: { borderRadius: 16, overflow: 'hidden' },
-  editBtnGrad: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    minHeight: 56, gap: 8,
-  },
-  editBtnText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#fff' },
-  deleteBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA',
-    borderRadius: 16, minHeight: 50, gap: 8,
-  },
-  deleteBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: '#DC2626' },
+  tagText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#4B5563' },
 
   stickyFooter: {
     backgroundColor: '#fff',
@@ -663,14 +599,44 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 28,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: '#F1F5F9',
   },
   bookBtn: {
     borderRadius: 16,
-    backgroundColor: '#1E3A8A',
+    backgroundColor: colors.primary,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     minHeight: 56, gap: 10,
   },
-  bookBtnPressed: { opacity: 0.85 },
   bookBtnText: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#fff' },
+  ownerFooterRow: { flexDirection: 'row', gap: 12 },
+  editBtn: {
+    flex: 1,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    minHeight: 56, gap: 10,
+  },
+  editBtnText: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#fff' },
+  deleteBtn: {
+    borderRadius: 16,
+    backgroundColor: 'rgba(239,68,68,0.08)',
+    borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    minHeight: 56, gap: 10,
+  },
+  deleteBtnText: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#EF4444' },
+  cancelBtn: {
+    flex: 1,
+    borderRadius: 16,
+    backgroundColor: 'rgba(239,68,68,0.08)',
+    borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    minHeight: 56, gap: 10,
+  },
+  cancelBtnDisabled: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+  },
+  cancelBtnText: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#EF4444' },
+  cancelBtnTextDisabled: { color: '#9CA3AF' },
 });
