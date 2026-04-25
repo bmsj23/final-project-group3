@@ -262,16 +262,7 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
 
           {/* Actions */}
           <View style={styles.metaRow}>
-            <View style={styles.actionRow}>
-              {isOwner && (
-                <Pressable
-                  style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.6 }]}
-                  onPress={confirmDelete}
-                >
-                  <Ionicons name="trash-outline" size={19} color="#EF4444" />
-                </Pressable>
-              )}
-            </View>
+            <View style={styles.actionRow} />
           </View>
 
           {/* Detail rows */}
@@ -350,6 +341,17 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
                 ))}
               </View>
             </View>
+          )}
+
+          {/* Delete — owner only */}
+          {isOwner && (
+            <Pressable
+              style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.88 }]}
+              onPress={confirmDelete}
+            >
+              <Ionicons name="trash-outline" size={19} color="#EF4444" />
+              <Text style={styles.deleteBtnText}>Delete Event</Text>
+            </Pressable>
           )}
         </Animated.View>
       </ScrollView>
@@ -569,6 +571,14 @@ const styles = StyleSheet.create({
     minHeight: 56, gap: 10,
   },
   editBtnText: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#fff' },
+  deleteBtn: {
+    borderRadius: 16,
+    backgroundColor: 'rgba(239,68,68,0.08)',
+    borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    minHeight: 56, gap: 10,
+  },
+  deleteBtnText: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#EF4444' },
   cancelBtn: {
     flex: 1,
     borderRadius: 16,
