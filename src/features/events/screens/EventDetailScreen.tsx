@@ -419,7 +419,6 @@ const styles = StyleSheet.create({
   categoryPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: 'rgba(30,58,138,0.07)',
-    borderWidth: 1, borderColor: 'rgba(30,58,138,0.15)',
     paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
   },
   categoryText: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: colors.primary, textTransform: 'uppercase', letterSpacing: 0.4 },
