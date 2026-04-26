@@ -47,6 +47,7 @@ export type EventFormSubmission = {
   selectedImage: EventImageAsset | null;
   originalCoverImageUrl: string | null;
   coverImageChanged: boolean;
+  existingImageRemoved: boolean; // true only when user explicitly removed the original
 };
 
 type EventFormProps = {
@@ -399,6 +400,7 @@ export function EventForm({
   const [errors, setErrors] = useState<EventFormErrors>({});
   const [selectedImages, setSelectedImages] = useState<EventImageAsset[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [existingSelected, setExistingSelected] = useState(true); // true = existing cover is the active preview
   const [removeExisting, setRemoveExisting] = useState(false);
   const [step, setStep] = useState(0);
   const [activePicker, setActivePicker] = useState<PickerTarget | null>(null);
@@ -424,6 +426,7 @@ export function EventForm({
     setErrors({});
     setSelectedImages([]);
     setSelectedImageIndex(0);
+    setExistingSelected(true);
     setRemoveExisting(false);
     setStep(0);
     setActivePicker(null);
@@ -464,9 +467,15 @@ export function EventForm({
   ]);
 
   // ── Derived preview URI ─────────────────────────────────────────────────
-  const previewUri = selectedImages.length > 0
-    ? selectedImages[selectedImageIndex]?.uri
-    : (removeExisting ? null : initialValues.coverImageUrl ?? null);
+  // Show the existing cover when it's selected and not removed,
+  // otherwise show whichever new image is active.
+  const existingCoverUri = removeExisting ? null : (initialValues.coverImageUrl ?? null);
+  const previewUri =
+    existingSelected && existingCoverUri
+      ? existingCoverUri
+      : selectedImages.length > 0
+        ? selectedImages[selectedImageIndex]?.uri ?? existingCoverUri
+        : existingCoverUri;
 
   // ── Helpers ─────────────────────────────────────────────────────────────
   function updateValue<K extends keyof EventFormValues>(key: K, val: EventFormValues[K]) {
@@ -491,6 +500,7 @@ export function EventForm({
       setSelectedImageIndex(updated.length - 1);
       return updated;
     });
+    setExistingSelected(false);
     setRemoveExisting(false);
   }
 
@@ -499,6 +509,8 @@ export function EventForm({
       const newImages = selectedImages.filter((_, i) => i !== index);
       setSelectedImages(newImages);
       setSelectedImageIndex(Math.min(selectedImageIndex, Math.max(0, newImages.length - 1)));
+      // If no new images remain, fall back to showing the existing cover
+      if (newImages.length === 0) setExistingSelected(true);
       return;
     }
     if (initialValues.coverImageUrl) setRemoveExisting(v => !v);
@@ -507,6 +519,7 @@ export function EventForm({
   function handleClearAll() {
     setSelectedImages([]);
     setSelectedImageIndex(0);
+    setExistingSelected(true);
     setRemoveExisting(true);
   }
 
@@ -583,6 +596,9 @@ export function EventForm({
     const nextValues: EventFormValues = {
       ...values,
       capacity: Number.isFinite(parsedCap) ? parsedCap : 0,
+      // Keep original URL unless user explicitly removed it.
+      // If a new image was selected, EditEventScreen will overwrite this with
+      // the uploaded URL — the original is NOT deleted unless removeExisting is true.
       coverImageUrl: removeExisting ? null : initialValues.coverImageUrl ?? null,
       dateTime: parseDateTimeInput(dateTimeInput),
       registrationDeadline: parseDateTimeInput(deadlineInput),
@@ -602,6 +618,7 @@ export function EventForm({
       selectedImage: selectedImages.length > 0 ? selectedImages[0] : null,
       originalCoverImageUrl: initialValues.coverImageUrl ?? null,
       coverImageChanged: selectedImages.length > 0 || removeExisting,
+      existingImageRemoved: removeExisting,
     });
   }
 
@@ -614,7 +631,7 @@ export function EventForm({
         visible={Boolean(activePicker)}
       >
         <Pressable style={styles.pickerModalBackdrop} onPress={() => setActivePicker(null)}>
-          <Pressable onPress={() => { }} style={styles.pickerModalCard}>
+          <Pressable onPress={() => {}} style={styles.pickerModalCard}>
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerHeaderText}>{getPickerTitle(activePicker)}</Text>
               <Pressable onPress={() => setActivePicker(null)} style={styles.pickerDoneBtn}>
@@ -632,14 +649,14 @@ export function EventForm({
                     disabledDates={
                       activePicker === 'deadlineDate'
                         ? (date) => {
-                          const eventDate = getDateFromInput(dateTimeInput);
-                          if (!eventDate || !date) return false;
-                          const d = dayjs(date).toDate();
-                          d.setHours(0, 0, 0, 0);
-                          const event = new Date(eventDate);
-                          event.setHours(0, 0, 0, 0);
-                          return d > event;
-                        }
+                            const eventDate = getDateFromInput(dateTimeInput);
+                            if (!eventDate || !date) return false;
+                            const d = dayjs(date).toDate();
+                            d.setHours(0, 0, 0, 0);
+                            const event = new Date(eventDate);
+                            event.setHours(0, 0, 0, 0);
+                            return d > event;
+                          }
                         : undefined
                     }
                     onChange={({ date }) => {
@@ -748,14 +765,10 @@ export function EventForm({
                 )}
               </Pressable>
 
-              {/* Images gallery - Horizontal scrollable */}
-              {selectedImages.length > 0 && (
+              {/* Images gallery - Horizontal scrollable
+                  Shows the existing cover (if any, not removed) + all newly picked images */}
+              {(selectedImages.length > 0 || (initialValues.coverImageUrl && !removeExisting)) && (
                 <View style={styles.galleryContainer}>
-                  {selectedImages.length > 1 && (
-                    <Pressable style={styles.arrowBtn} onPress={scrollGalleryLeft} disabled={selectedImageIndex === 0}>
-                      <Ionicons name="chevron-back" size={16} color={selectedImageIndex === 0 ? '#CBD5E1' : '#0F172A'} />
-                    </Pressable>
-                  )}
                   <ScrollView
                     ref={galleryScrollRef}
                     horizontal
@@ -764,12 +777,31 @@ export function EventForm({
                     style={styles.galleryScroll}
                     contentContainerStyle={styles.galleryScrollContent}
                   >
+                    {/* Existing cover thumbnail — always visible until explicitly removed */}
+                    {initialValues.coverImageUrl && !removeExisting && (
+                      <View style={styles.galleryThumbWrap}>
+                        <Pressable
+                          style={[styles.galleryThumbnail, existingSelected && styles.galleryThumbnailActive]}
+                          onPress={() => setExistingSelected(true)}
+                        >
+                          <Image contentFit="cover" source={{ uri: initialValues.coverImageUrl }} style={styles.galleryThumbImage} transition={150} />
+                        </Pressable>
+                        <Pressable
+                          style={styles.galleryThumbRemoveBtn}
+                          onPress={() => { setRemoveExisting(true); setExistingSelected(false); }}
+                          hitSlop={6}
+                        >
+                          <Ionicons name="close" size={10} color="#fff" />
+                        </Pressable>
+                      </View>
+                    )}
                     {selectedImages.map((img, idx) => (
                       <View key={`${idx}-${img.fileName}`} style={styles.galleryThumbWrap}>
                         <Pressable
-                          style={[styles.galleryThumbnail, idx === selectedImageIndex && styles.galleryThumbnailActive]}
+                          style={[styles.galleryThumbnail, !existingSelected && idx === selectedImageIndex && styles.galleryThumbnailActive]}
                           onPress={() => {
                             setSelectedImageIndex(idx);
+                            setExistingSelected(false);
                             galleryScrollRef.current?.scrollTo({
                               x: idx * (60 + spacing.sm),
                               animated: true,
@@ -788,21 +820,16 @@ export function EventForm({
                       </View>
                     ))}
                   </ScrollView>
-                  {selectedImages.length > 1 && (
-                    <Pressable style={styles.arrowBtn} onPress={scrollGalleryRight} disabled={selectedImageIndex === selectedImages.length - 1}>
-                      <Ionicons name="chevron-forward" size={16} color={selectedImageIndex === selectedImages.length - 1 ? '#CBD5E1' : '#0F172A'} />
-                    </Pressable>
-                  )}
                 </View>
               )}
 
-              {(previewUri || selectedImages.length > 0) && (
+              {(previewUri || selectedImages.length > 0 || (initialValues.coverImageUrl && !removeExisting)) && (
                 <View style={styles.imageBtnGroup}>
                   <Pressable style={styles.removeImgBtn} onPress={() => void handlePickImage()}>
                     <Ionicons name="add-circle-outline" size={14} color="#2563EB" />
                     <Text style={styles.removeImgText} numberOfLines={1}>Add Photos</Text>
                   </Pressable>
-                  {selectedImages.length > 0 && (
+                  {(selectedImages.length > 0 || (initialValues.coverImageUrl && !removeExisting)) && (
                     <Pressable style={styles.removeImgBtn} onPress={handleClearAll}>
                       <Ionicons name="trash-outline" size={14} color="#EF4444" />
                       <Text style={[styles.removeImgText, { color: '#EF4444' }]}>Clear All</Text>
@@ -893,7 +920,7 @@ export function EventForm({
             </View>
 
             <NavRow
-              onBack={() => { }}
+              onBack={() => {}}
               onNext={goToStep1}
               nextLabel="Next: Schedule"
               backDisabled
@@ -1065,8 +1092,9 @@ const styles = StyleSheet.create({
   progress: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.xxs,
     paddingHorizontal: spacing.xxs,
+    borderTopWidth: 0,
   },
   progressItem: { flex: 1, alignItems: 'center', position: 'relative' },
   progressDot: {
@@ -1106,9 +1134,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl, overflow: 'hidden',
     backgroundColor: '#F8FAFC',
     borderWidth: 2, borderColor: '#E2E8F0', borderStyle: 'dashed',
-    minHeight: 160,
+    height: 180,
   },
-  coverImg: { width: '100%', height: 180 },
+  coverImg: {
+    width: '100%',
+    height: '100%',
+  },
   coverOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.35)',
@@ -1117,7 +1148,7 @@ const styles = StyleSheet.create({
   },
   coverOverlayText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
   coverPlaceholder: {
-    height: 160, alignItems: 'center', justifyContent: 'center', gap: 8,
+    height: '100%', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
   coverPlaceholderIcon: {
     width: 56, height: 56, borderRadius: 18,
@@ -1127,13 +1158,9 @@ const styles = StyleSheet.create({
   coverPlaceholderSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8' },
 
   galleryContainer: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingBottom: 10,
-  },
-  arrowBtn: {
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0',
-    alignItems: 'center', justifyContent: 'center',
-    marginTop: 10,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    marginTop: -spacing.sm,   // pull gallery up against the cover zone
+    marginBottom: -spacing.xs,
   },
   galleryScroll: { flex: 1, height: 70 },
   galleryScrollContent: { alignItems: 'flex-end' },
@@ -1149,8 +1176,8 @@ const styles = StyleSheet.create({
   galleryThumbnailActive: { borderColor: colors.primary, borderWidth: 3 },
   galleryThumbImage: { width: '100%', height: '100%' },
   galleryThumbRemoveBtn: {
-    position: 'absolute', top: -4, right: -4,
-    width: 24, height: 24, borderRadius: 12,
+    position: 'absolute', top: -8, right: -8,
+    width: 18, height: 18, borderRadius: 9,
     backgroundColor: '#EF4444',
     alignItems: 'center', justifyContent: 'center',
     zIndex: 10,

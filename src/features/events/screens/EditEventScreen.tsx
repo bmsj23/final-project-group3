@@ -43,7 +43,13 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
   const [isSubmitting, setIsSubmitting]       = useState(false);
   const [screenError, setScreenError]         = useState<string | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
-  const [isDirty, setIsDirty]                 = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const isDirtyRef = useRef(false);
+
+  function updateIsDirty(value: boolean) {
+    isDirtyRef.current = value;
+    setIsDirty(value);
+  }
   const scrollRef = useRef<ScrollView | null>(null);
   const handleDescriptionFocus = useCallback(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
@@ -82,7 +88,7 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (!isDirty) return;
+      if (!isDirtyRef.current) return;
 
       e.preventDefault();
 
@@ -101,32 +107,55 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
     });
 
     return unsubscribe;
-  }, [navigation, isDirty]);
+  }, [navigation]); // no isDirty in deps — ref is always current
 
   const handleSubmit = useCallback(
-    async ({ coverImageChanged, originalCoverImageUrl, selectedImage, values }: EventFormSubmission) => {
+    async ({ existingImageRemoved, originalCoverImageUrl, selectedImage, values }: EventFormSubmission) => {
       if (!profile || !event) { setSubmissionError('Event is no longer available.'); return; }
       if (profile.id !== event.organizerId) { setSubmissionError('Only the event owner can update this.'); return; }
       setIsSubmitting(true);
       setSubmissionError(null);
       let uploadedImagePath: string | null = null;
+
+      // Start with whatever the form says the cover URL should be.
+      // If the user didn't remove the existing image, this is the original URL.
+      // If they removed it, this is null.
       let nextCoverImageUrl = values.coverImageUrl ?? null;
+
       try {
         if (selectedImage) {
-          const { data, error } = await uploadEventImage(profile.id, selectedImage);
-          if (error || !data) throw error ?? new Error('Cover image upload failed.');
-          uploadedImagePath = data.path;
-          nextCoverImageUrl = data.publicUrl;
+          if (!existingImageRemoved && originalCoverImageUrl) {
+            // User added a new photo WITHOUT removing the existing one.
+            // The event only stores one coverImageUrl, so we keep the original
+            // and discard the newly picked image — it's supplementary only in
+            // the local gallery UI. The original persists as the stored cover.
+            // (If you want to replace the cover, users should clear first then add.)
+            nextCoverImageUrl = originalCoverImageUrl;
+          } else {
+            // User explicitly removed the existing cover then added a new one,
+            // OR there was no existing cover. Upload the new image.
+            const { data, error } = await uploadEventImage(profile.id, selectedImage);
+            if (error || !data) throw error ?? new Error('Cover image upload failed.');
+            uploadedImagePath = data.path;
+            nextCoverImageUrl = data.publicUrl;
+          }
         }
+
         const { error } = await updateOwnEvent(event.id, { ...values, coverImageUrl: nextCoverImageUrl });
         if (error) {
           if (uploadedImagePath) await deleteEventImage(uploadedImagePath);
           throw error;
         }
-        if (coverImageChanged && originalCoverImageUrl && originalCoverImageUrl !== nextCoverImageUrl) {
+
+        // Only delete the original file from storage when the user explicitly
+        // removed it and a new image was uploaded to replace it.
+        if (existingImageRemoved && originalCoverImageUrl && uploadedImagePath) {
           await deleteEventImageFromPublicUrl(originalCoverImageUrl);
         }
-        navigation.replace('EventDetail', { eventId: event.id });
+
+        setIsDirty(false);
+        isDirtyRef.current = false;
+        navigation.goBack();
       } catch (err) {
         setSubmissionError(err instanceof Error ? err.message : 'Unable to update event.');
       } finally {
@@ -282,13 +311,7 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
               >
                 <Ionicons name="chevron-back" size={20} color="#CBD5E1" />
               </Pressable>
-              {/* Amber badge — distinct from Create's blue */}
-              <LinearGradient colors={['#D97706', '#F59E0B']} style={styles.heroBadge}>
-                <Ionicons name="pencil" size={20} color="#fff" />
-              </LinearGradient>
             </View>
-
-            <Text style={styles.heroEyebrow}>Organizer Tools</Text>
             <Text style={styles.heroTitle}>Edit Event</Text>
             <Text style={styles.heroSub}>
               Update the details, schedule, or cover image for your event.
@@ -312,7 +335,7 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
               onStepChange={() => {}}
               onSubmit={handleSubmit}
               onDescriptionFocus={handleDescriptionFocus}
-              onDirtyChange={setIsDirty}
+              onDirtyChange={updateIsDirty}
               resetKey={`${event.id}:${event.updatedAt}`}
               submitLabel={isSubmitting ? 'Saving Changes…' : 'Save Changes ✦'}
             />
@@ -371,13 +394,10 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center', justifyContent: 'center',
   },
-  heroBadge: {
-    width: 48, height: 48, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center',
-  },
   heroEyebrow: {
-    fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#FBBF24',
-    letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6,
+    fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#FBBF24',
+    letterSpacing: 1.5, textTransform: 'uppercase',
+    paddingTop: 8, paddingHorizontal: 10,
   },
   heroTitle: {
     fontFamily: 'Inter_700Bold', fontSize: 28,
@@ -410,7 +430,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15, shadowRadius: 20, elevation: 16,
   },
   formHandle: {
-    width: 40, height: 5, borderRadius: 3,
-    backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 20,
+    width: 0, height: 0, borderRadius: 3,
+    backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 0,
   },
 });
