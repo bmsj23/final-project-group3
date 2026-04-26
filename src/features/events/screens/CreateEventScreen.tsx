@@ -227,7 +227,6 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
             >
               <Ionicons name="chevron-back" size={20} color="#CBD5E1" />
             </Pressable>
-            <Text style={styles.heroEyebrow}>Organizer Tools</Text>
           </View>
 
           <Text style={styles.heroTitle}>Create New Event</Text>
