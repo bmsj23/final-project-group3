@@ -135,7 +135,7 @@ export const styles = StyleSheet.create({
   statItem: { flex: 1, alignItems: 'center', gap: 6 },
   statValue: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 22,
+    fontSize: 16,
     color: '#F1F5F9',
     letterSpacing: -0.5,
   },
@@ -220,13 +220,14 @@ export const styles = StyleSheet.create({
     fontFamily: 'Inter_500Medium',
     fontSize: 13,
     color: '#64748B',
-    width: 80,
+    width: 92,
   },
   infoValue: {
     fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     color: '#0F172A',
     flex: 1,
+    paddingLeft: 12,
     textAlign: 'right',
   },
   menuCard: {

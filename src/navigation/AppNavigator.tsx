@@ -7,10 +7,9 @@ import { EventDetailScreen } from '../features/events/screens/EventDetailScreen'
 import { AdminUsersScreen } from '../features/admin/screens/AdminUsersScreen';
 import { EditProfileScreen } from '../features/profile/edit-profile/EditProfileScreen';
 import { HelpScreen } from '../features/profile/help/HelpScreen';
+import { NotificationScreen } from '../features/profile/notifications/NotificationScreen';
 import { PrivacyScreen } from '../features/profile/privacy/PrivacyScreen';
-import { NotificationScreen } from '../features/notifications/screens/NotificationScreen';
 import { colors } from '../theme/colors';
-import { fontFamily } from '../theme/typography';
 import { AppTabsNavigator } from './AppTabsNavigator';
 import type { AppStackParamList } from './types';
 
