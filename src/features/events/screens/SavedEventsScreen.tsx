@@ -1,7 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { AppTabScreenProps } from '../../../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -62,9 +61,9 @@ function SavedEventCard({
             transition={150}
           />
         ) : (
-          <LinearGradient colors={['#1E3A8A', '#2563EB']} style={styles.cardImageFallback}>
+          <View style={styles.cardImageFallback}>
             <Ionicons color="rgba(255,255,255,0.35)" name="heart" size={30} />
-          </LinearGradient>
+          </View>
         )}
         <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
           <Text style={[styles.statusText, { color: statusStyle.text }]}>
@@ -209,14 +208,8 @@ export function SavedEventsScreen({ navigation }: SavedEventsScreenProps) {
 
   if (isGuest) {
     return (
-      <SafeAreaView style={styles.root} edges={[]}>
-        <StatusBar style="light" />
-        <LinearGradient
-          colors={['#060D1F', '#0F1E3D', '#0A1628']}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.orbBlue} pointerEvents="none" />
-        <View style={styles.orbPurple} pointerEvents="none" />
+      <SafeAreaView style={styles.root} edges={['top']}>
+        <StatusBar style="dark" />
 
         <View style={styles.guestContainer}>
           <View style={styles.guestIconWrap}>
@@ -230,15 +223,10 @@ export function SavedEventsScreen({ navigation }: SavedEventsScreenProps) {
             onPress={() => void signOut()}
             style={({ pressed }) => [styles.guestBtn, pressed && { opacity: 0.85 }]}
           >
-            <LinearGradient
-              colors={['#FF3CAC', '#784BA0', '#2B86C5']}
-              end={{ x: 1, y: 0 }}
-              start={{ x: 0, y: 0 }}
-              style={styles.guestBtnGrad}
-            >
+            <View style={styles.guestBtnSurface}>
               <Text style={styles.guestBtnText}>Sign In</Text>
               <Ionicons color="#fff" name="arrow-forward" size={16} />
-            </LinearGradient>
+            </View>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -246,14 +234,8 @@ export function SavedEventsScreen({ navigation }: SavedEventsScreenProps) {
   }
 
   return (
-    <SafeAreaView style={styles.root} edges={[]}>
+    <SafeAreaView style={styles.root} edges={['top']}>
       <StatusBar style="dark" />
-      <LinearGradient
-        colors={['#070B2A', '#2B0A3C', '#230F47']}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={styles.orbBlue} pointerEvents="none" />
-      <View style={styles.orbPurple} pointerEvents="none" />
 
       <ScrollView
         bounces={false}
@@ -305,9 +287,9 @@ export function SavedEventsScreen({ navigation }: SavedEventsScreenProps) {
             </View>
           ) : savedEvents.length === 0 ? (
             <View style={styles.emptyWrap}>
-              <LinearGradient colors={['#1E3A8A', '#2563EB']} style={styles.emptyIllustration}>
+              <View style={styles.emptyIllustration}>
                 <Ionicons color="rgba(255,255,255,0.7)" name="heart-outline" size={38} />
-              </LinearGradient>
+              </View>
               <Text style={styles.emptyTitle}>No saved events yet</Text>
               <Text style={styles.emptySub}>
                 Tap the heart icon on any event to save it here.
@@ -332,19 +314,8 @@ export function SavedEventsScreen({ navigation }: SavedEventsScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#060D1F' },
+  root: { flex: 1, backgroundColor: '#EEF4FF' },
   scroll: { flexGrow: 1 },
-
-  orbBlue: {
-    position: 'absolute', top: -90, right: -70,
-    width: 320, height: 320, borderRadius: 160,
-    backgroundColor: '#4F46E5', opacity: 0.16,
-  },
-  orbPurple: {
-    position: 'absolute', top: 140, left: -90,
-    width: 260, height: 260, borderRadius: 130,
-    backgroundColor: '#EC4899', opacity: 0.12,
-  },
 
   guestContainer: {
     alignItems: 'center',
@@ -355,8 +326,10 @@ const styles = StyleSheet.create({
   },
   guestIconWrap: {
     alignItems: 'center',
-    backgroundColor: 'rgba(251,113,133,0.14)',
-    borderRadius: radius.full,
+    backgroundColor: '#FFF1F2',
+    borderColor: '#FECACA',
+    borderRadius: 24,
+    borderWidth: 1,
     height: 84,
     justifyContent: 'center',
     width: 84,
@@ -364,18 +337,19 @@ const styles = StyleSheet.create({
   guestTitle: {
     fontFamily: 'Inter_700Bold',
     fontSize: 28,
-    color: '#F1F5F9',
+    color: '#0F172A',
   },
   guestSub: {
     fontFamily: 'Inter_400Regular',
     fontSize: 15,
     lineHeight: 22,
-    color: '#CBD5E1',
+    color: '#64748B',
     textAlign: 'center',
   },
   guestBtn: { borderRadius: radius.full, overflow: 'hidden' },
-  guestBtnGrad: {
+  guestBtnSurface: {
     alignItems: 'center',
+    backgroundColor: colors.primaryDark,
     flexDirection: 'row',
     gap: spacing.xs,
     justifyContent: 'center',
@@ -385,9 +359,12 @@ const styles = StyleSheet.create({
   guestBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: '#fff' },
 
   hero: {
-    paddingTop: 56,
-    paddingHorizontal: layout.screenPaddingH,
-    paddingBottom: 32,
+    marginTop: spacing.lg,
+    marginHorizontal: layout.screenPaddingH,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.primaryDark,
+    borderRadius: radius.xl,
   },
   heroTop: {
     flexDirection: 'row', alignItems: 'flex-start',
@@ -395,37 +372,37 @@ const styles = StyleSheet.create({
   },
   heroEyebrow: {
     fontFamily: 'Inter_500Medium', fontSize: 12,
-    color: '#94A3B8', letterSpacing: 0.5, marginBottom: 4,
+    color: '#C7DAF8', letterSpacing: 0.5, marginBottom: 4,
   },
   heroTitle: {
-    fontFamily: 'Inter_700Bold', fontSize: 32,
-    color: '#F1F5F9', letterSpacing: -0.8,
+    fontFamily: 'Inter_700Bold', fontSize: 30,
+    color: '#FFFFFF', letterSpacing: -0.6,
   },
   heroChip: {
-    backgroundColor: 'rgba(251,113,133,0.16)',
-    borderWidth: 1, borderColor: 'rgba(251,113,133,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)',
     borderRadius: radius.xl, paddingHorizontal: 14, paddingVertical: 9,
     alignItems: 'center',
   },
-  heroChipCount: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FB7185' },
+  heroChipCount: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
   heroChipLabel: {
-    fontFamily: 'Inter_400Regular', fontSize: 10, color: '#CBD5E1',
+    fontFamily: 'Inter_400Regular', fontSize: 10, color: '#D6E4FA',
     textTransform: 'uppercase', letterSpacing: 0.5,
   },
 
   bodySheet: {
     flex: 1,
-    backgroundColor: '#FAF5FF',
-    borderTopLeftRadius: 36, borderTopRightRadius: 36,
+    marginTop: spacing.lg,
+    backgroundColor: '#F8FBFF',
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingTop: 16, paddingBottom: 100,
     minHeight: 500,
-    shadowColor: '#A855F7',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.12, shadowRadius: 24, elevation: 18,
+    borderTopWidth: 1,
+    borderTopColor: '#DDE7F6',
   },
   bodyHandle: {
     width: 40, height: 5, borderRadius: 3,
-    backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 20,
+    backgroundColor: '#CBD5E1', alignSelf: 'center', marginBottom: 20,
   },
   bodyHeader: {
     paddingHorizontal: layout.screenPaddingH,
@@ -439,21 +416,21 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: 'rgba(167,139,250,0.3)',
+    borderWidth: 1,
+    borderColor: '#D7E3F4',
     overflow: 'hidden',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   cardImageWrap: { position: 'relative', height: 130 },
   cardImage: { width: '100%', height: '100%' },
   cardImageFallback: {
     width: '100%', height: '100%',
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#7C3AED',
+    backgroundColor: colors.primaryDark,
   },
   statusBadge: {
     position: 'absolute',
@@ -462,6 +439,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.24)',
   },
   statusText: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase' },
   cardBody: { padding: spacing.md, gap: spacing.xxs },
@@ -475,13 +454,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'Inter_700Bold',
     fontSize: 17,
-    color: '#312E81',
+    color: '#0F172A',
     lineHeight: 24,
   },
   favoriteBtn: {
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
+    backgroundColor: '#FFF5F5',
+    borderColor: '#FDD5D5',
     borderRadius: radius.full,
     borderWidth: 1,
     height: 30,
@@ -494,7 +473,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   cardMetaText: {
-    color: '#94A3B8',
+    color: '#64748B',
     flex: 1,
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
@@ -509,6 +488,7 @@ const styles = StyleSheet.create({
   emptyIllustration: {
     alignItems: 'center',
     borderRadius: 22,
+    backgroundColor: colors.primaryDark,
     height: 88,
     justifyContent: 'center',
     width: 88,
@@ -520,7 +500,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptySub: {
-    color: '#475569',
+    color: '#64748B',
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
     lineHeight: 22,

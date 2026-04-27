@@ -141,6 +141,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                 onExplore={() => navigation.navigate('Explore')}
                 onMenuPress={handleMenuPress}
                 onMyEvents={() => navigation.navigate('MyEvents')}
+                onMyRegistrations={() => navigation.navigate('MyRegistrations')}
                 onNotifications={() => navigation.navigate('Notifications')}
                 onSaved={() => navigation.navigate('Saved')}
                 onSignOut={handleSignOut}

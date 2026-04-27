@@ -9,6 +9,7 @@ import { EditProfileScreen } from '../features/profile/edit-profile/EditProfileS
 import { HelpScreen } from '../features/profile/help/HelpScreen';
 import { NotificationScreen } from '../features/profile/notifications/NotificationScreen';
 import { PrivacyScreen } from '../features/profile/privacy/PrivacyScreen';
+import { MyRegistrationsScreen } from '../features/bookings/screens/MyRegistrationsScreen';
 import { colors } from '../theme/colors';
 import { AppTabsNavigator } from './AppTabsNavigator';
 import type { AppStackParamList } from './types';
@@ -34,6 +35,7 @@ export function AppNavigator() {
       <Stack.Screen component={PrivacyScreen} name="Privacy" />
       <Stack.Screen component={TermsPolicyScreen} name="TermsPolicy" />
       <Stack.Screen component={HelpScreen} name="Help" />
+      <Stack.Screen component={MyRegistrationsScreen} name="MyRegistrations" />
     </Stack.Navigator>
   );
 }

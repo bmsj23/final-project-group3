@@ -1,7 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { AppTabScreenProps } from '../../../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -77,12 +76,9 @@ function EventCard({
               transition={150}
             />
           ) : (
-            <LinearGradient
-              colors={['#1E3A8A', '#2563EB']}
-              style={styles.cardImageFallback}
-            >
+            <View style={styles.cardImageFallback}>
               <Ionicons name="calendar" size={32} color="rgba(255,255,255,0.3)" />
-            </LinearGradient>
+            </View>
           )}
           {/* Status badge overlay */}
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
@@ -178,13 +174,7 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
   if (isGuest) {
     return (
       <SafeAreaView style={styles.root} edges={[]}>
-        <StatusBar style="light" />
-        <LinearGradient
-          colors={['#060D1F', '#0F1E3D', '#0A1628']}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.orbBlue}   pointerEvents="none" />
-        <View style={styles.orbPurple} pointerEvents="none" />
+        <StatusBar style="dark" />
 
         <View style={styles.guestContainer}>
           <View style={styles.guestIconWrap}>
@@ -198,14 +188,10 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
             style={({ pressed }) => [styles.guestBtn, pressed && { opacity: 0.85 }]}
             onPress={() => void signOut()}
           >
-            <LinearGradient
-              colors={['#FF3CAC', '#784BA0', '#2B86C5']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={styles.guestBtnGrad}
-            >
+            <View style={styles.guestBtnSurface}>
               <Text style={styles.guestBtnText}>Sign In</Text>
               <Ionicons name="arrow-forward" size={16} color="#fff" />
-            </LinearGradient>
+            </View>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -215,15 +201,7 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
   // ── AUTHENTICATED STATE ────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.root} edges={[]}>
-      <StatusBar style="light" />
-
-      {/* Background */}
-      <LinearGradient
-        colors={['#070B2A', '#2B0A3C', '#230F47']}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={styles.orbBlue}   pointerEvents="none" />
-      <View style={styles.orbPurple} pointerEvents="none" />
+      <StatusBar style="dark" />
 
       <ScrollView
         bounces={false}
@@ -289,14 +267,10 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
               style={({ pressed }) => [styles.createBtn, pressed && { opacity: 0.88 }]}
               onPress={() => navigation.navigate('CreateEvent')}
             >
-              <LinearGradient
-                colors={['#EC4899', '#6366F1', '#06B6D4']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={styles.createBtnGrad}
-              >
+              <View style={styles.createBtnSurface}>
                 <Ionicons name="add" size={18} color="#fff" />
                 <Text style={styles.createBtnText}>New</Text>
-              </LinearGradient>
+              </View>
             </Pressable>
           </View>
 
@@ -328,12 +302,9 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
             </View>
           ) : events.length === 0 ? (
             <View style={styles.emptyWrap}>
-              <LinearGradient
-                colors={['#1E3A8A', '#2563EB']}
-                style={styles.emptyIllustration}
-              >
+              <View style={styles.emptyIllustration}>
                 <Ionicons name="calendar-outline" size={40} color="rgba(255,255,255,0.6)" />
-              </LinearGradient>
+              </View>
               <Text style={styles.emptyTitle}>No events yet</Text>
               <Text style={styles.emptySub}>
                 Tap the button below to create your first campus event and start getting attendees.
@@ -342,14 +313,10 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
                 style={({ pressed }) => [styles.emptyCreateBtn, pressed && { opacity: 0.85 }]}
                 onPress={() => navigation.navigate('CreateEvent')}
               >
-                <LinearGradient
-                  colors={['#2563EB', '#1D4ED8']}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                  style={styles.emptyCreateGrad}
-                >
+                <View style={styles.emptyCreateSurface}>
                   <Ionicons name="add-circle-outline" size={18} color="#fff" />
                   <Text style={styles.emptyCreateText}>Create Your First Event</Text>
-                </LinearGradient>
+                </View>
               </Pressable>
             </View>
           ) : (
@@ -384,12 +351,9 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
             style={({ pressed }) => [styles.fabBtn, pressed && { opacity: 0.85 }]}
             onPress={() => navigation.navigate('CreateEvent')}
           >
-            <LinearGradient
-              colors={['#2563EB', '#1D4ED8']}
-              style={styles.fabGrad}
-            >
+            <View style={styles.fabSurface}>
               <Ionicons name="add" size={26} color="#fff" />
-            </LinearGradient>
+            </View>
           </Pressable>
         </Animated.View>
       )}
@@ -398,72 +362,64 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#060D1F' },
+  root: { flex: 1, backgroundColor: '#EEF4FF' },
   scroll: { flexGrow: 1 },
-
-  orbBlue: {
-    position: 'absolute', top: -90, right: -70,
-    width: 320, height: 320, borderRadius: 160,
-    backgroundColor: '#4F46E5', opacity: 0.16,
-  },
-  orbPurple: {
-    position: 'absolute', top: 140, left: -90,
-    width: 260, height: 260, borderRadius: 130,
-    backgroundColor: '#EC4899', opacity: 0.12,
-  },
 
   // Hero
   hero: {
-    paddingTop: 56,
-    paddingHorizontal: layout.screenPaddingH,
-    paddingBottom: 32,
+    marginTop: spacing.md,
+    marginHorizontal: layout.screenPaddingH,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.primaryDark,
+    borderRadius: radius.xl,
   },
   heroTop: {
     flexDirection: 'row', alignItems: 'flex-start',
-    justifyContent: 'space-between', marginBottom: 20,
+    justifyContent: 'space-between', marginBottom: spacing.md,
   },
   heroEyebrow: {
     fontFamily: 'Inter_500Medium', fontSize: 12,
-    color: '#475569', letterSpacing: 0.5, marginBottom: 4,
+    color: '#C7DAF8', letterSpacing: 0.5, marginBottom: 4,
   },
   heroTitle: {
-    fontFamily: 'Inter_700Bold', fontSize: 32,
-    color: '#F1F5F9', letterSpacing: -0.8,
+    fontFamily: 'Inter_700Bold', fontSize: 30,
+    color: '#FFFFFF', letterSpacing: -0.6,
   },
   heroChip: {
-    backgroundColor: 'rgba(236,72,153,0.14)',
-    borderWidth: 1, borderColor: 'rgba(167,139,250,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)',
     borderRadius: radius.xl, paddingHorizontal: 14, paddingVertical: 9,
     alignItems: 'center',
   },
-  heroChipCount: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#60A5FA' },
-  heroChipLabel: { fontFamily: 'Inter_400Regular', fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5 },
+  heroChipCount: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
+  heroChipLabel: { fontFamily: 'Inter_400Regular', fontSize: 10, color: '#D6E4FA', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   heroStats: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(236,72,153,0.08)',
-    borderWidth: 1, borderColor: 'rgba(99,102,241,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)',
     borderRadius: radius.xl, paddingVertical: 14,
   },
   heroStatItem: { flex: 1, alignItems: 'center', gap: 3 },
-  heroStatBorder: { borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.07)' },
+  heroStatBorder: { borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.2)' },
   heroStatValue: { fontFamily: 'Inter_700Bold', fontSize: 20 },
-  heroStatLabel: { fontFamily: 'Inter_400Regular', fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.4 },
+  heroStatLabel: { fontFamily: 'Inter_400Regular', fontSize: 10, color: '#D6E4FA', textTransform: 'uppercase', letterSpacing: 0.4 },
 
   // Body sheet
   body: {
     flex: 1,
-    backgroundColor: '#FAF5FF',
-    borderTopLeftRadius: 36, borderTopRightRadius: 36,
+    marginTop: spacing.lg,
+    backgroundColor: '#F8FBFF',
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingTop: 16, paddingBottom: 100,
     minHeight: 500,
-    shadowColor: '#A855F7',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.12, shadowRadius: 24, elevation: 18,
+    borderTopWidth: 1,
+    borderTopColor: '#DDE7F6',
   },
   bodyHandle: {
     width: 40, height: 5, borderRadius: 3,
-    backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 20,
+    backgroundColor: '#CBD5E1', alignSelf: 'center', marginBottom: 20,
   },
   bodyHeader: {
     flexDirection: 'row', alignItems: 'center',
@@ -472,14 +428,14 @@ const styles = StyleSheet.create({
   },
   bodyTitle: { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#0F172A' },
   createBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'transparent', borderRadius: radius.full,
+    borderRadius: radius.full,
   },
-  createBtnGrad: {
+  createBtnSurface: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     minHeight: 42, gap: spacing.xs,
     paddingHorizontal: spacing.md, paddingVertical: 10,
     borderRadius: radius.full,
+    backgroundColor: colors.primaryDark,
   },
   createBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#fff' },
 
@@ -488,60 +444,61 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: radius.xl,
-    borderWidth: 1.5, borderColor: 'rgba(167,139,250,0.3)',
+    borderWidth: 1, borderColor: '#D7E3F4',
     overflow: 'hidden',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12, shadowRadius: 24, elevation: 10,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   cardImageWrap: { position: 'relative', height: 130 },
   cardImage: { width: '100%', height: '100%' },
-  cardImageFallback: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#7C3AED' },
+  cardImageFallback: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2A63BC' },
   statusBadge: {
     position: 'absolute', top: 10, left: 10,
     paddingHorizontal: 12, paddingVertical: 5,
     borderRadius: radius.full,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.24)',
   },
   statusText: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase' },
   cardBody: { padding: spacing.md, gap: 8 },
-  cardTitle: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#312E81', lineHeight: 24 },
+  cardTitle: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#0F172A', lineHeight: 24 },
   cardMeta: { gap: 4 },
   cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  cardMetaText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#94A3B8', flex: 1 },
+  cardMetaText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#64748B', flex: 1 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
   spotsRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   spotsText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: colors.primary },
   chevronWrap: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#EEF4FF', alignItems: 'center', justifyContent: 'center',
   },
 
   // Empty states
   emptyWrap: { alignItems: 'center', paddingHorizontal: layout.screenPaddingH, paddingTop: 40, gap: 12 },
   emptyIcon: {
     width: 64, height: 64, borderRadius: 32,
-    backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center',
   },
   emptyIllustration: {
     width: 100, height: 100, borderRadius: 28,
     alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+    backgroundColor: colors.primaryDark,
   },
   emptyTitle: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#0F172A', textAlign: 'center' },
-  emptySub: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#94A3B8', textAlign: 'center', lineHeight: 20 },
+  emptySub: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 20 },
   retryBtn: {
     backgroundColor: '#EFF6FF', borderRadius: radius.full,
     paddingHorizontal: 20, paddingVertical: 10, marginTop: 4,
   },
   retryText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: colors.primary },
   emptyCreateBtn: { borderRadius: radius.md, overflow: 'hidden', marginTop: 8, width: '100%' },
-  emptyCreateGrad: {
+  emptyCreateSurface: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     minHeight: 52, gap: spacing.xs,
+    backgroundColor: colors.primaryDark,
   },
   emptyCreateText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#fff' },
 
@@ -552,22 +509,39 @@ const styles = StyleSheet.create({
   },
   guestIconWrap: {
     width: 80, height: 80, borderRadius: 24,
-    backgroundColor: 'rgba(96,165,250,0.12)',
-    borderWidth: 1, borderColor: 'rgba(96,165,250,0.25)',
+    backgroundColor: '#E8F1FF',
+    borderWidth: 1, borderColor: '#CDE0FB',
     alignItems: 'center', justifyContent: 'center',
   },
-  guestTitle: { fontFamily: 'Inter_700Bold', fontSize: 26, color: '#F1F5F9', letterSpacing: -0.5 },
+  guestTitle: { fontFamily: 'Inter_700Bold', fontSize: 26, color: '#0F172A', letterSpacing: -0.5 },
   guestSub: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#475569', textAlign: 'center', lineHeight: 22 },
   guestBtn: { borderRadius: radius.md, overflow: 'hidden', width: '100%', marginTop: 8 },
-  guestBtnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 54, gap: spacing.xs },
+  guestBtnSurface: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 54,
+    gap: spacing.xs,
+    backgroundColor: colors.primaryDark,
+  },
   guestBtnText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#fff' },
 
   // FAB
   fab: {
     position: 'absolute', bottom: 28, right: 24,
-    shadowColor: '#2563EB', shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4, shadowRadius: 12, elevation: 10,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 6,
   },
   fabBtn: { borderRadius: 32 },
-  fabGrad: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center' },
+  fabSurface: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryDark,
+  },
 });
