@@ -54,7 +54,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export function EventDetailScreen({ navigation, route }: EventDetailScreenProps) {
-  const { profile } = useAppSession();
+  const { profile, signOut } = useAppSession();
   const { isFavorited, toggleFavorite } = useEventFavorites();
   const [event, setEvent]         = useState<EventDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -691,8 +691,8 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
               </>
             ) : (
               <Pressable
-                style={({ pressed }) => [styles.bookBtn, styles.bookBtnDisabled, pressed && { opacity: 0.92 }]}
-                disabled
+                style={({ pressed }) => [styles.bookBtn, pressed && { opacity: 0.88 }]}
+                onPress={() => void signOut()}
               >
                 <Ionicons name="lock-closed-outline" size={20} color="#fff" />
                 <Text style={styles.bookBtnText}>Sign in to register</Text>
