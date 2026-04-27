@@ -1,5 +1,11 @@
 import { supabase, supabaseConfig } from '../../lib/supabase/client';
-import type { CategoryRecord, EventFavoriteRecord, EventRecord } from '../../lib/supabase/types';
+import type {
+  CategoryRecord,
+  EventFavoriteRecord,
+  EventRecord,
+  EventRemainingSlotsRow,
+  ProfileRecord,
+} from '../../lib/supabase/types';
 import {
   EVENT_IMAGE_MAX_BYTES,
   EVENT_IMAGE_MAX_SIZE_LABEL,
@@ -19,6 +25,7 @@ import type {
 
 type EventRecordWithCategory = EventRecord & {
   categories: Pick<CategoryRecord, 'name'> | Array<Pick<CategoryRecord, 'name'>> | null;
+  organizer: Pick<ProfileRecord, 'full_name' | 'avatar_url'> | Array<Pick<ProfileRecord, 'full_name' | 'avatar_url'>> | null;
 };
 
 function requireSupabase() {
@@ -29,7 +36,35 @@ function requireSupabase() {
   return supabase;
 }
 
-function mapEvent(record: EventRecord): EventSummary {
+async function fetchRemainingSlotsByEventIds(eventIds: string[]) {
+  const client = requireSupabase();
+  const uniqueIds = Array.from(new Set(eventIds));
+
+  if (uniqueIds.length === 0) {
+    return {
+      data: new Map<string, number>(),
+      error: null,
+    };
+  }
+
+  const { data, error } = await client.rpc('fetch_event_remaining_slots', {
+    p_event_ids: uniqueIds,
+  });
+
+  const remainingSlotsByEventId = new Map<string, number>();
+  const rows: EventRemainingSlotsRow[] = data ?? [];
+
+  for (const row of rows) {
+    remainingSlotsByEventId.set(row.event_id, row.remaining_slots);
+  }
+
+  return {
+    data: remainingSlotsByEventId,
+    error,
+  };
+}
+
+function mapEvent(record: EventRecord, remainingSlots?: number): EventSummary {
   return {
     id: record.id,
     organizerId: record.organizer_id,
@@ -37,22 +72,25 @@ function mapEvent(record: EventRecord): EventSummary {
     location: record.location,
     startsAt: record.date_time,
     capacity: record.capacity,
-    remainingSlots: record.capacity,
+    remainingSlots: remainingSlots ?? record.capacity,
     status: record.status,
     categoryId: record.category_id,
     coverImageUrl: record.cover_image_url,
   };
 }
 
-function mapEventDetail(record: EventRecordWithCategory): EventDetail {
+function mapEventDetail(record: EventRecordWithCategory, remainingSlots?: number): EventDetail {
   const category = Array.isArray(record.categories) ? record.categories[0] : record.categories;
+  const organizer = Array.isArray(record.organizer) ? record.organizer[0] : record.organizer;
 
   return {
-    ...mapEvent(record),
+    ...mapEvent(record, remainingSlots),
     description: record.description,
     registrationDeadline: record.registration_deadline,
     tags: record.tags,
     categoryName: category?.name ?? null,
+    organizerName: organizer?.full_name ?? null,
+    organizerAvatarUrl: organizer?.avatar_url ?? null,
     isFlagged: record.is_flagged,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
@@ -131,9 +169,14 @@ export async function fetchUpcomingEvents() {
     .order('date_time', { ascending: true })
     .limit(20);
 
+  const records = data ?? [];
+  const { data: remainingSlotsByEventId, error: remainingSlotsError } = await fetchRemainingSlotsByEventIds(
+    records.map((record) => record.id),
+  );
+
   return {
-    data: data?.map(mapEvent) ?? [],
-    error,
+    data: records.map((record) => mapEvent(record, remainingSlotsByEventId.get(record.id))),
+    error: error ?? remainingSlotsError,
   };
 }
 
@@ -146,9 +189,14 @@ export async function fetchMyCreatedEvents(organizerId: string) {
     .eq('organizer_id', organizerId)
     .order('date_time', { ascending: true });
 
+  const records = data ?? [];
+  const { data: remainingSlotsByEventId, error: remainingSlotsError } = await fetchRemainingSlotsByEventIds(
+    records.map((record) => record.id),
+  );
+
   return {
-    data: data?.map(mapEvent) ?? [],
-    error,
+    data: records.map((record) => mapEvent(record, remainingSlotsByEventId.get(record.id))),
+    error: error ?? remainingSlotsError,
   };
 }
 
@@ -201,10 +249,13 @@ export async function fetchEventsByIds(eventIds: string[]) {
 
   const order = new Map(eventIds.map((id, index) => [id, index]));
   const orderedEvents = (data ?? []).sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
+  const { data: remainingSlotsByEventId, error: remainingSlotsError } = await fetchRemainingSlotsByEventIds(
+    orderedEvents.map((record) => record.id),
+  );
 
   return {
-    data: orderedEvents.map(mapEvent),
-    error,
+    data: orderedEvents.map((record) => mapEvent(record, remainingSlotsByEventId.get(record.id))),
+    error: error ?? remainingSlotsError,
   };
 }
 
@@ -244,15 +295,23 @@ export async function fetchEventById(eventId: string) {
         updated_at,
         categories (
           name
+        ),
+        organizer:profiles!events_organizer_id_fkey (
+          full_name,
+          avatar_url
         )
       `,
     )
     .eq('id', eventId)
     .maybeSingle<EventRecordWithCategory>();
 
+  const { data: remainingSlotsByEventId, error: remainingSlotsError } = await fetchRemainingSlotsByEventIds(
+    data ? [data.id] : [],
+  );
+
   return {
-    data: data ? mapEventDetail(data) : null,
-    error,
+    data: data ? mapEventDetail(data, remainingSlotsByEventId.get(data.id)) : null,
+    error: error ?? remainingSlotsError,
   };
 }
 

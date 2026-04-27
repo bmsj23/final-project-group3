@@ -28,6 +28,7 @@ export type AppStackParamList = {
   Privacy: undefined;
   TermsPolicy: { section?: 'terms' | 'privacy' };
   Help: undefined;
+  MyRegistrations: undefined;
 };
 
 export type AppTabScreenProps<RouteName extends keyof AppTabParamList> = CompositeScreenProps<

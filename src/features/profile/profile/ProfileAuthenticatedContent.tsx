@@ -22,6 +22,7 @@ type ProfileAuthenticatedContentProps = {
   onExplore: () => void;
   onMenuPress: (action: ProfileMenuAction) => void;
   onMyEvents: () => void;
+  onMyRegistrations: () => void;
   onNotifications: () => void;
   onSaved: () => void;
   onSignOut: () => void;
@@ -36,6 +37,7 @@ export function ProfileAuthenticatedContent({
   onExplore,
   onMenuPress,
   onMyEvents,
+  onMyRegistrations,
   onNotifications,
   onSaved,
   onSignOut,
@@ -44,6 +46,7 @@ export function ProfileAuthenticatedContent({
 }: ProfileAuthenticatedContentProps) {
   const quickActions: QuickAction[] = [
     { icon: 'calendar', label: 'My Events', color: '#60A5FA', onPress: onMyEvents },
+    { icon: 'ticket', label: 'Tickets', color: '#6366F1', onPress: onMyRegistrations },
     { icon: 'add-circle', label: 'Create', color: '#34D399', onPress: onCreateEvent },
     { icon: 'compass', label: 'Explore', color: '#FBBF24', onPress: onExplore },
     { icon: 'heart', label: 'Saved', color: '#FB7185', onPress: onSaved },

@@ -32,6 +32,8 @@ export type EventDetail = EventSummary & {
   registrationDeadline: string;
   tags: string[];
   categoryName: string | null;
+  organizerName: string | null;
+  organizerAvatarUrl: string | null;
   isFlagged: boolean;
   createdAt: string;
   updatedAt: string;

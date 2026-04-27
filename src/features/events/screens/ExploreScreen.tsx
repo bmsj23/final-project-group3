@@ -145,7 +145,6 @@ export function ExploreScreen({ navigation }: ExploreScreenProps) {
                   {categories.map((category) => (
                     <CategoryPill
                       key={category.id}
-                      icon={category.iconName}
                       label={category.name}
                       onPress={() => setSelectedCategoryId(category.id)}
                       selected={selectedCategoryId === category.id}

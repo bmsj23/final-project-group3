@@ -3,7 +3,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -30,8 +30,15 @@ import {
   fetchEventById,
   updateEventStatus,
 } from '../api';
+import {
+  cancelBooking,
+  fetchMyBookingForEvent,
+  registerForEvent,
+  updateBookingTickets,
+} from '../../bookings/api';
 import { formatEventDateTime, formatEventStatus } from '../formatters';
 import type { EventDetail } from '../types';
+import type { BookingSummary } from '../../bookings/types';
 
 type EventDetailScreenProps = NativeStackScreenProps<AppStackParamList, 'EventDetail'>;
 
@@ -42,6 +49,10 @@ const STATUS_COLORS: Record<string, { text: string; bg: string }> = {
   cancelled: { text: '#EF4444', bg: 'rgba(239,68,68,0.1)'   },
 };
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function EventDetailScreen({ navigation, route }: EventDetailScreenProps) {
   const { profile } = useAppSession();
   const { isFavorited, toggleFavorite } = useEventFavorites();
@@ -49,6 +60,13 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [myBooking, setMyBooking] = useState<BookingSummary | null>(null);
+  const [selectedTicketCount, setSelectedTicketCount] = useState(1);
+  const [isBookingLoading, setIsBookingLoading] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [isUpdatingBooking, setIsUpdatingBooking] = useState(false);
+  const [isCancellingBooking, setIsCancellingBooking] = useState(false);
+  const [bookingErrorMessage, setBookingErrorMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const sheetAnim = useRef(new Animated.Value(0)).current;
@@ -65,19 +83,61 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
         toValue: 1, useNativeDriver: true, tension: 65, friction: 10,
       }).start();
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Unable to load event details.');
+      setErrorMessage(getErrorMessage(err, 'Unable to load event details.'));
     } finally {
       setIsLoading(false);
     }
   }, [route.params.eventId]);
 
-  useFocusEffect(useCallback(() => { void loadEvent(); }, [loadEvent]));
+  const loadBooking = useCallback(async () => {
+    if (!profile?.id) {
+      setMyBooking(null);
+      setSelectedTicketCount(1);
+      setBookingErrorMessage(null);
+      return;
+    }
+
+    setIsBookingLoading(true);
+    try {
+      const { data, error } = await fetchMyBookingForEvent(route.params.eventId);
+      if (error) throw new Error((error as { message?: string }).message ?? 'Unable to load your booking status.');
+
+      setMyBooking(data);
+      setSelectedTicketCount(data?.ticketCount ?? 1);
+      setBookingErrorMessage(null);
+    } catch (err) {
+      setMyBooking(null);
+      setSelectedTicketCount(1);
+      setBookingErrorMessage(getErrorMessage(err, 'Unable to load your booking status.'));
+    } finally {
+      setIsBookingLoading(false);
+    }
+  }, [profile?.id, route.params.eventId]);
+
+  useFocusEffect(useCallback(() => { void Promise.all([loadEvent(), loadBooking()]); }, [loadBooking, loadEvent]));
 
   const isAdmin = isAdminRole(profile?.role);
   const isOwner = profile?.id === event?.organizerId;
   const canModerate = isOwner || isAdmin;
   const isSaved = event ? isFavorited(event.id) : false;
   const statusStyle = STATUS_COLORS[event?.status ?? 'upcoming'] ?? STATUS_COLORS.upcoming;
+  const isAuthenticated = Boolean(profile?.id);
+
+  const maxSelectableTickets = useMemo(() => {
+    if (!event) {
+      return 1;
+    }
+
+    if (myBooking) {
+      return Math.max(1, myBooking.ticketCount + event.remainingSlots);
+    }
+
+    return Math.max(1, event.remainingSlots);
+  }, [event, myBooking]);
+
+  useEffect(() => {
+    setSelectedTicketCount((current) => Math.min(Math.max(current, 1), maxSelectableTickets));
+  }, [maxSelectableTickets]);
 
   const detailRows = useMemo(() =>
     event ? [
@@ -97,6 +157,82 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
       Alert.alert('Unable to save event', error instanceof Error ? error.message : 'Please try again.');
     }
   }, [event, toggleFavorite]);
+
+  const refreshAfterBookingMutation = useCallback(async () => {
+    await Promise.all([loadEvent(), loadBooking()]);
+  }, [loadBooking, loadEvent]);
+
+  const adjustTicketCount = useCallback((delta: number) => {
+    setSelectedTicketCount((current) => {
+      const next = current + delta;
+      if (next < 1) return 1;
+      if (next > maxSelectableTickets) return maxSelectableTickets;
+      return next;
+    });
+  }, [maxSelectableTickets]);
+
+  const handleRegisterBooking = useCallback(async () => {
+    if (!event || !profile?.id) {
+      Alert.alert('Sign in required', 'Please sign in to register for this event.');
+      return;
+    }
+
+    setIsRegistering(true);
+    try {
+      const { error } = await registerForEvent(event.id, selectedTicketCount);
+      if (error) throw error;
+      await refreshAfterBookingMutation();
+    } catch (error) {
+      Alert.alert('Unable to register', getErrorMessage(error, 'Could not register for this event.'));
+    } finally {
+      setIsRegistering(false);
+    }
+  }, [event, profile?.id, refreshAfterBookingMutation, selectedTicketCount]);
+
+  const handleUpdateBooking = useCallback(async () => {
+    if (!myBooking) {
+      return;
+    }
+
+    setIsUpdatingBooking(true);
+    try {
+      const { error } = await updateBookingTickets(myBooking.id, selectedTicketCount);
+      if (error) throw error;
+      await refreshAfterBookingMutation();
+    } catch (error) {
+      Alert.alert('Unable to update booking', getErrorMessage(error, 'Could not update your booking.'));
+    } finally {
+      setIsUpdatingBooking(false);
+    }
+  }, [myBooking, refreshAfterBookingMutation, selectedTicketCount]);
+
+  const handleCancelBooking = useCallback(async () => {
+    if (!myBooking) {
+      return;
+    }
+
+    setIsCancellingBooking(true);
+    try {
+      const { error } = await cancelBooking(myBooking.id);
+      if (error) throw error;
+      await refreshAfterBookingMutation();
+    } catch (error) {
+      Alert.alert('Unable to cancel booking', getErrorMessage(error, 'Could not cancel your booking.'));
+    } finally {
+      setIsCancellingBooking(false);
+    }
+  }, [myBooking, refreshAfterBookingMutation]);
+
+  const confirmCancelBooking = useCallback(() => {
+    Alert.alert(
+      'Cancel your booking?',
+      'Your reserved slots will be released to other attendees.',
+      [
+        { text: 'Keep Booking', style: 'cancel' },
+        { text: 'Cancel Booking', style: 'destructive', onPress: () => void handleCancelBooking() },
+      ],
+    );
+  }, [handleCancelBooking]);
 
   async function handleDelete() {
     if (!event || !profile || (!isOwner && !isAdmin)) {
@@ -173,6 +309,17 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
       ],
     );
   }
+
+  const isBookingMutationLoading = isRegistering || isUpdatingBooking || isCancellingBooking;
+  const isTicketStepperDisabled = isBookingLoading || isBookingMutationLoading;
+  const canDecreaseTickets = selectedTicketCount > 1;
+  const canIncreaseTickets = selectedTicketCount < maxSelectableTickets;
+  const isRegisterDisabled = isTicketStepperDisabled || (event?.remainingSlots ?? 0) <= 0;
+  const isUpdateDisabled =
+    isTicketStepperDisabled
+    || !myBooking
+    || selectedTicketCount === myBooking.ticketCount;
+  const isCancelBookingDisabled = isTicketStepperDisabled || !myBooking;
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (isLoading) {
@@ -342,9 +489,21 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
           <Text style={styles.sectionTitle}>Event Organizer</Text>
           <View style={styles.organizerCard}>
             <View style={styles.organizerAvatar}>
-              <Ionicons name="person" size={22} color={colors.primary} />
+              {event.organizerAvatarUrl ? (
+                <Image
+                  contentFit="cover"
+                  source={{ uri: event.organizerAvatarUrl }}
+                  style={styles.organizerAvatarImage}
+                  transition={150}
+                />
+              ) : (
+                <Ionicons name="person" size={22} color={colors.primary} />
+              )}
             </View>
             <View style={styles.organizerInfo}>
+              <Text style={styles.organizerName}>
+                {event.organizerName ?? (isOwner ? 'You' : 'Eventure Organizer')}
+              </Text>
               <Text style={styles.organizerRole}>
                 {isOwner ? '✦ You created this event' : 'Hosted by an Eventure organizer'}
               </Text>
@@ -425,13 +584,121 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
             </Pressable>
           </View>
         ) : (
-          <Pressable
-            style={({ pressed }) => [styles.bookBtn, pressed && { opacity: 0.88 }]}
-            onPress={() => Alert.alert('Booking', 'Booking feature coming soon! 🎟️')}
-          >
-            <Ionicons name="ticket-outline" size={20} color="#fff" />
-            <Text style={styles.bookBtnText}>Register Now</Text>
-          </Pressable>
+          <View style={styles.bookingFooterContent}>
+            {isAuthenticated ? (
+              <>
+                <View style={styles.ticketStepperRow}>
+                  <Text style={styles.ticketStepperLabel}>
+                    {myBooking ? 'Update tickets' : 'Select tickets'}
+                  </Text>
+                  <View style={styles.ticketStepper}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.ticketStepperBtn,
+                        (pressed || (!canDecreaseTickets || isTicketStepperDisabled)) && styles.ticketStepperBtnPressed,
+                      ]}
+                      onPress={() => adjustTicketCount(-1)}
+                      disabled={!canDecreaseTickets || isTicketStepperDisabled}
+                    >
+                      <Ionicons
+                        name="remove"
+                        size={16}
+                        color={!canDecreaseTickets || isTicketStepperDisabled ? '#9CA3AF' : '#111827'}
+                      />
+                    </Pressable>
+                    <Text style={styles.ticketStepperCount}>{selectedTicketCount}</Text>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.ticketStepperBtn,
+                        (pressed || (!canIncreaseTickets || isTicketStepperDisabled)) && styles.ticketStepperBtnPressed,
+                      ]}
+                      onPress={() => adjustTicketCount(1)}
+                      disabled={!canIncreaseTickets || isTicketStepperDisabled}
+                    >
+                      <Ionicons
+                        name="add"
+                        size={16}
+                        color={!canIncreaseTickets || isTicketStepperDisabled ? '#9CA3AF' : '#111827'}
+                      />
+                    </Pressable>
+                  </View>
+                </View>
+
+                {myBooking ? (
+                  <>
+                    <Text style={styles.bookingHintText}>
+                      You currently have {myBooking.ticketCount} ticket{myBooking.ticketCount === 1 ? '' : 's'} booked.
+                    </Text>
+                    <View style={styles.bookingActionRow}>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.bookBtn,
+                          styles.bookingPrimaryBtn,
+                          pressed && { opacity: 0.88 },
+                          isUpdateDisabled && styles.bookBtnDisabled,
+                        ]}
+                        onPress={() => void handleUpdateBooking()}
+                        disabled={isUpdateDisabled}
+                      >
+                        <Ionicons name="refresh-outline" size={18} color="#fff" />
+                        <Text style={styles.bookBtnText}>{isUpdatingBooking ? 'Updating…' : 'Update'}</Text>
+                      </Pressable>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.cancelBtn,
+                          styles.bookingCancelBtn,
+                          pressed && { opacity: 0.88 },
+                          isCancelBookingDisabled && styles.cancelBtnDisabled,
+                        ]}
+                        onPress={confirmCancelBooking}
+                        disabled={isCancelBookingDisabled}
+                      >
+                        <Ionicons
+                          name="close-circle-outline"
+                          size={18}
+                          color={isCancelBookingDisabled ? '#9CA3AF' : '#EF4444'}
+                        />
+                        <Text style={[styles.cancelBtnText, isCancelBookingDisabled && styles.cancelBtnTextDisabled]}>
+                          {isCancellingBooking ? 'Cancelling…' : 'Cancel Booking'}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </>
+                ) : (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.bookBtn,
+                      pressed && { opacity: 0.88 },
+                      isRegisterDisabled && styles.bookBtnDisabled,
+                    ]}
+                    onPress={() => void handleRegisterBooking()}
+                    disabled={isRegisterDisabled}
+                  >
+                    <Ionicons name="ticket-outline" size={20} color="#fff" />
+                    <Text style={styles.bookBtnText}>
+                      {isBookingLoading
+                        ? 'Checking booking…'
+                        : isRegistering
+                          ? 'Registering…'
+                          : event.remainingSlots <= 0
+                            ? 'Sold Out'
+                            : 'Register Now'}
+                    </Text>
+                  </Pressable>
+                )}
+
+                {bookingErrorMessage ? <Text style={styles.bookingErrorText}>{bookingErrorMessage}</Text> : null}
+              </>
+            ) : (
+              <Pressable
+                style={({ pressed }) => [styles.bookBtn, styles.bookBtnDisabled, pressed && { opacity: 0.92 }]}
+                disabled
+              >
+                <Ionicons name="lock-closed-outline" size={20} color="#fff" />
+                <Text style={styles.bookBtnText}>Sign in to register</Text>
+              </Pressable>
+            )}
+          </View>
         )}
       </View>
     </SafeAreaView>
@@ -550,7 +817,9 @@ const styles = StyleSheet.create({
     width: 48, height: 48, borderRadius: 24,
     backgroundColor: 'rgba(30,58,138,0.08)',
     alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
   },
+  organizerAvatarImage: { width: '100%', height: '100%' },
   organizerInfo: { flex: 1, gap: 3 },
   organizerName: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#111827' },
   organizerRole: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#6B7280' },
@@ -607,7 +876,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     minHeight: 56, gap: 10,
   },
+  bookBtnDisabled: { opacity: 0.55 },
   bookBtnText: { fontFamily: 'Inter_700Bold', fontSize: 17, color: '#fff' },
+  bookingFooterContent: { gap: 10 },
+  ticketStepperRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
+  ticketStepperLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#111827' },
+  ticketStepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 999,
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 4,
+    height: 38,
+  },
+  ticketStepperBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ticketStepperBtnPressed: { backgroundColor: '#E5E7EB' },
+  ticketStepperCount: {
+    minWidth: 32,
+    textAlign: 'center',
+    fontFamily: 'Inter_700Bold',
+    fontSize: 16,
+    color: '#111827',
+  },
+  bookingHintText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#6B7280' },
+  bookingActionRow: { flexDirection: 'row', gap: 10 },
+  bookingPrimaryBtn: { flex: 1 },
+  bookingCancelBtn: { flex: 1, minHeight: 56 },
+  bookingErrorText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#DC2626' },
   ownerFooterRow: { flexDirection: 'row', gap: 12 },
   editBtn: {
     flex: 1,
