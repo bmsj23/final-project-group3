@@ -84,7 +84,7 @@ export function WelcomeScreen({ navigation }: WelcomeScreenProps) {
         <Text style={styles.sheetEyebrow}>discover . book . vibe</Text>
         <Text style={styles.sheetHeadline}>
           Campus events,{'\n'}
-          <Text style={styles.sheetHeadlineAccent}>made for your era.</Text>
+          <Text style={styles.sheetHeadlineAccent}>Made for your era.</Text>
         </Text>
 
         <View style={styles.btnStack}>
@@ -95,9 +95,6 @@ export function WelcomeScreen({ navigation }: WelcomeScreenProps) {
           >
             <View style={styles.btnPrimaryFill}>
               <Text style={styles.btnPrimaryText}>Sign In</Text>
-              <View style={styles.btnArrow}>
-                <Ionicons name="arrow-forward" size={16} color="#1E3A8A" />
-              </View>
             </View>
           </Pressable>
 
@@ -126,13 +123,13 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#020617' },
   hero: {
     flex: 1,
-    paddingTop: 64,
+    paddingTop: 56,
     paddingHorizontal: spacing.xl,
-    paddingBottom: 22,
+    paddingBottom: 32,
     justifyContent: 'flex-start',
   },
   heroTop: {
-    gap: 18,
+    gap: 14,
   },
   logoText: {
     fontFamily: 'Inter_700Bold',
@@ -141,7 +138,7 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
   },
   headlineBlock: {
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
   },
   h1: {
     fontFamily: 'Inter_700Bold',
@@ -181,22 +178,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     fontSize: 28,
     lineHeight: 34,
-    color: '#E0F2FE',
+    color: '#DBEAFE',
     letterSpacing: -0.7,
-    marginTop: 8,
+    marginTop: 4,
   },
   subcopy: {
     maxWidth: '92%',
     fontFamily: 'Inter_400Regular',
-    fontSize: 17,
-    lineHeight: 26,
+    fontSize: 18,
+    lineHeight: 28,
     color: '#E2E8F0',
-    marginTop: 4,
+    marginTop: 8,
+    marginBottom: 24,
   },
   statsRow: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 36,
+    marginTop: 40,
     alignSelf: 'center',
     width: '100%',
   },
@@ -204,7 +202,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 88,
     borderRadius: 22,
-    backgroundColor: 'rgba(15,23,42,0.72)',
+    backgroundColor: '#0f172ab8',
     borderWidth: 1,
     borderColor: 'rgba(147,197,253,0.22)',
     paddingVertical: 18,
@@ -231,8 +229,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingHorizontal: spacing.xl,
-    paddingTop: 18,
-    paddingBottom: 38,
+    paddingTop: 14,
+    paddingBottom: 32,
     borderTopWidth: 1,
     borderColor: 'rgba(96,165,250,0.18)',
     shadowColor: '#1D4ED8',
@@ -252,11 +250,11 @@ const styles = StyleSheet.create({
   sheetEyebrow: {
     fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
-    color: '#2563EB',
+    color: '#0F172A',
     letterSpacing: 3,
     textTransform: 'uppercase',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   sheetHeadline: {
     fontFamily: 'Inter_700Bold',
@@ -265,12 +263,12 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     letterSpacing: -0.8,
     textAlign: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   sheetHeadlineAccent: {
-    color: '#2563EB',
+    color: '#0F172A',
   },
-  btnStack: { gap: spacing.sm, marginBottom: spacing.sm },
+  btnStack: { gap: 10, marginBottom: 10 },
   btnPrimary: {
     borderRadius: radius.md,
     overflow: 'hidden',
@@ -282,7 +280,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
     gap: spacing.xs,
     paddingHorizontal: spacing.xl,
-    backgroundColor: '#2563EB',
+    backgroundColor: '#0f172a',
   },
   btnPrimaryText: {
     fontFamily: 'Inter_700Bold',
@@ -303,14 +301,14 @@ const styles = StyleSheet.create({
     minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
-    borderColor: 'rgba(59,130,246,0.24)',
+    borderColor: 'rgba(15,23,42,0.18)',
   },
   btnOutlineText: {
     fontFamily: 'Inter_700Bold',
     fontSize: 16,
-    color: '#1D4ED8',
+    color: '#0f172a',
     letterSpacing: 0.2,
   },
   btnGhost: {
@@ -320,7 +318,7 @@ const styles = StyleSheet.create({
   btnGhostText: {
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    color: '#475569',
+    color: '#0F172A',
     letterSpacing: 0.2,
   },
 });
