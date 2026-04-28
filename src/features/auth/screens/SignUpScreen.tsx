@@ -19,10 +19,9 @@ import { isSupabaseConfigured } from '../../../lib/supabase/client';
 import type { AuthStackParamList } from '../../../navigation/types';
 import { useAppSession } from '../../../providers/AppSessionProvider';
 import { colors } from '../../../theme/colors';
-import { radius } from '../../../theme/radius';
-import { spacing } from '../../../theme/spacing';
 import type { AuthFormErrors, SignUpFormValues } from '../types';
 import { isStrongEnoughPassword, isValidEmail } from '../validation';
+import { styles } from './signUpScreen.styles';
 
 type SignUpScreenProps = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
 
@@ -30,7 +29,7 @@ function getPasswordStrength(password: string): { level: 0 | 1 | 2 | 3; label: s
   if (password.length === 0) return { level: 0, label: '', color: '#1E293B' };
   if (password.length < 6) return { level: 1, label: 'Weak', color: '#EF4444' };
   if (password.length < 10) return { level: 2, label: 'Fair', color: '#F59E0B' };
-  return { level: 3, label: 'Strong', color: '#2563EB' };
+  return { level: 3, label: 'Strong', color: '#0F172A' };
 }
 
 export function SignUpScreen({ navigation }: SignUpScreenProps) {
@@ -154,12 +153,11 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
                 </View>
                 <Text style={styles.h2Solid}> NOW</Text>
               </View>
-              <Text style={styles.h3Accent}>sign up mode</Text>
+              <Text style={styles.h3Accent}>Sign Up Mode</Text>
             </View>
           </Animated.View>
 
           <Animated.View style={[styles.sheet, { opacity: sheetOp, transform: [{ translateY: sheetY }] }]}>
-
             <ScrollView
               contentContainerStyle={styles.sheetScroll}
               keyboardShouldPersistTaps="handled"
@@ -167,12 +165,9 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
               bounces={false}
             >
               <View style={styles.sheetHead}>
-                <View style={styles.sparkleCircle}>
-                  <Ionicons name="sparkles" size={22} color="#60A5FA" />
-                </View>
                 <View style={styles.sheetHeadCopy}>
-                  <Text style={styles.sheetTitle}>create account</Text>
-                  <Text style={styles.sheetSub}>free to start and ready when you are</Text>
+                  <Text style={styles.sheetTitle}>Create Account</Text>
+                  <Text style={styles.sheetSub}>Free to start and ready when you are.</Text>
                 </View>
               </View>
 
@@ -191,7 +186,7 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
                       <Ionicons
                         name="person-outline"
                         size={17}
-                        color={errors.fullName ? colors.error : '#60A5FA'}
+                        color={errors.fullName ? colors.error : '#0F172A'}
                       />
                     </View>
                     <TextInput
@@ -221,7 +216,7 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
                       <Ionicons
                         name="mail-outline"
                         size={17}
-                        color={errors.email ? colors.error : '#60A5FA'}
+                        color={errors.email ? colors.error : '#0F172A'}
                       />
                     </View>
                     <TextInput
@@ -252,7 +247,7 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
                       <Ionicons
                         name="lock-closed-outline"
                         size={17}
-                        color={errors.password ? colors.error : '#60A5FA'}
+                        color={errors.password ? colors.error : '#0F172A'}
                       />
                     </View>
                     <TextInput
@@ -276,7 +271,7 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
                       <Ionicons
                         name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                         size={18}
-                        color="#93C5FD"
+                        color="#0F172A"
                       />
                     </Pressable>
                   </View>
@@ -344,9 +339,7 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
                   ) : (
                     <>
                       <Text style={styles.btnLabel}>Create Account</Text>
-                      <View style={styles.btnArrow}>
-                        <Ionicons name="arrow-forward" size={16} color="#1E3A8A" />
-                      </View>
+                      
                     </>
                   )}
                 </View>
@@ -364,7 +357,7 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
                 onPress={() => navigation.navigate('SignIn')}
               >
                 <Text style={styles.signinText}>already have an account?</Text>
-                <Text style={styles.signinLink}> sign in</Text>
+                <Text style={styles.signinLink}> Sign In</Text>
               </Pressable>
             </ScrollView>
           </Animated.View>
@@ -373,255 +366,3 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#020617' },
-  kav: { flex: 1 },
-  layout: { flex: 1, justifyContent: 'flex-end' },
-  hero: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingTop: 60,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
-  },
-  backBtn: {
-    marginBottom: spacing.xl,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(15,23,42,0.42)',
-    borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headlineBlock: { gap: 6, marginTop: spacing.md },
-  h1: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 52,
-    lineHeight: 54,
-    color: '#FFFFFF',
-    letterSpacing: -2.3,
-  },
-  h2Row: { flexDirection: 'row', alignItems: 'baseline' },
-  strokeWrap: { position: 'relative' },
-  h2StrokeBase: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 52,
-    lineHeight: 58,
-    letterSpacing: -2.3,
-  },
-  h2StrokeOutline: {
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(255,255,255,0.18)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
-  },
-  h2StrokeFill: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    color: '#020617',
-  },
-  h2Solid: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 52,
-    lineHeight: 58,
-    color: '#FFFFFF',
-    letterSpacing: -2.3,
-  },
-  h3Accent: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 28,
-    lineHeight: 34,
-    color: '#BFDBFE',
-    letterSpacing: -0.7,
-    marginTop: 8,
-  },
-  sheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingTop: 12,
-    maxHeight: '68%',
-    borderTopWidth: 1,
-    borderColor: 'rgba(96,165,250,0.18)',
-    shadowColor: '#1D4ED8',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 20,
-    elevation: 20,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#1E3A8A',
-    alignSelf: 'center',
-    marginBottom: 4,
-  },
-  sheetScroll: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: 8,
-    paddingBottom: 44,
-  },
-  sheetHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  sheetHeadCopy: { flex: 1 },
-  sparkleCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1.5,
-    borderColor: '#BFDBFE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sheetTitle: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 22,
-    color: '#0F172A',
-    letterSpacing: -0.5,
-  },
-  sheetSub: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  errorBannerText: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    color: colors.error,
-    flex: 1,
-    lineHeight: 19,
-  },
-  form: { marginBottom: spacing.md },
-  fieldWrap: { gap: 7 },
-  fieldGap: { marginTop: spacing.md },
-  fieldLabel: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
-    color: '#334155',
-    letterSpacing: 0.1,
-  },
-  inputShell: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: radius.md,
-    minHeight: 56,
-    paddingRight: spacing.md,
-    overflow: 'hidden',
-  },
-  inputError: { borderColor: colors.error, backgroundColor: '#FFF5F5' },
-  inputIcon: {
-    width: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
-    height: 56,
-  },
-  inputIconError: { borderRightColor: '#FECACA', backgroundColor: '#FFF0F0' },
-  input: {
-    flex: 1,
-    fontFamily: 'Inter_400Regular',
-    fontSize: 16,
-    color: '#0F172A',
-    paddingHorizontal: spacing.md,
-    minHeight: 54,
-  },
-  validIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#2563EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 2,
-  },
-  eyeBtn: { padding: 4 },
-  fieldError: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#FCA5A5' },
-  strengthWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: 6,
-  },
-  strengthBars: { flexDirection: 'row', gap: 5, flex: 1 },
-  strengthBar: { flex: 1, height: 4, borderRadius: 2 },
-  strengthLabel: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 12,
-    width: 44,
-    textAlign: 'right',
-  },
-  termsText: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 12,
-    color: '#64748B',
-    lineHeight: 18,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  termsLink: { fontFamily: 'Inter_600SemiBold', color: '#60A5FA' },
-  btnPrimary: { borderRadius: radius.md, overflow: 'hidden', marginBottom: spacing.md },
-  btnFill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 56,
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    backgroundColor: '#2563EB',
-  },
-  btnLabel: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 17,
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-  },
-  btnArrow: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(239,246,255,0.95)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dotsRow: { flexDirection: 'row', gap: 5, marginRight: 6 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.55)' },
-  orRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  orLine: { flex: 1, height: 1, backgroundColor: 'rgba(96,165,250,0.14)' },
-  orText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#94A3B8' },
-  signinBtn: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 4 },
-  signinText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#64748B' },
-  signinLink: { fontFamily: 'Inter_700Bold', fontSize: 14, color: '#60A5FA' },
-});
