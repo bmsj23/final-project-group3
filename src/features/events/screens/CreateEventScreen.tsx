@@ -47,6 +47,7 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [currentStep, setCurrentStep]         = useState(0);
   const [isDirty, setIsDirty]                 = useState(false);
+  const isDirtyRef = useRef(false);
   const scrollRef = useRef<ScrollView | null>(null);
   const handleDescriptionFocus = useCallback(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
@@ -73,28 +74,27 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
 
   useEffect(() => { void loadCategories(); }, [loadCategories]);
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (!isDirty) return;
+  // Keep ref in sync with state so handleBack always reads the latest value
+  const handleDirtyChange = useCallback((value: boolean) => {
+    isDirtyRef.current = value;
+    setIsDirty(value);
+  }, []);
 
-      e.preventDefault();
-
-      Alert.alert(
-        'Discard changes?',
-        'You have unsaved changes. Are you sure you want to leave without publishing this event?',
-        [
-          { text: 'Keep Editing', onPress: () => {}, style: 'cancel' },
-          {
-            text: 'Discard',
-            onPress: () => navigation.dispatch(e.data.action),
-            style: 'destructive',
-          },
-        ],
-      );
-    });
-
-    return unsubscribe;
-  }, [navigation, isDirty]);
+  // Replace beforeRemove — intercept back manually
+  const handleBack = useCallback(() => {
+    if (!isDirtyRef.current) {
+      navigation.goBack();
+      return;
+    }
+    Alert.alert(
+      'Discard changes?',
+      'You have unsaved changes. Are you sure you want to leave without publishing this event?',
+      [
+        { text: 'Keep Editing', style: 'cancel' },
+        { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
+      ],
+    );
+  }, [navigation]);
 
   const handleSubmit = useCallback(
     async ({ selectedImage, values }: EventFormSubmission) => {
@@ -209,48 +209,49 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
           keyboardDismissMode="interactive"
           contentContainerStyle={styles.scroll}
         >
-        {/* ── Hero ── */}
-        <Animated.View
-          style={[
-            styles.hero,
-            {
-              opacity: heroAnim,
-              transform: [{ translateY: heroAnim.interpolate({ inputRange:[0,1], outputRange:[-20,0] }) }],
-            },
-          ]}
-        >
-          <View style={styles.heroTopRow}>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="chevron-back" size={20} color="#CBD5E1" />
-            </Pressable>
+          {/* ── Hero ── */}
+          <Animated.View
+            style={[
+              styles.hero,
+              {
+                opacity: heroAnim,
+                transform: [{ translateY: heroAnim.interpolate({ inputRange:[0,1], outputRange:[-20,0] }) }],
+              },
+            ]}
+          >
+            <View style={styles.heroTopRow}>
+              {/* Back button now calls handleBack instead of navigation.goBack() */}
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
+                onPress={handleBack}
+              >
+                <Ionicons name="chevron-back" size={20} color="#CBD5E1" />
+              </Pressable>
+            </View>
+            <Text style={styles.heroEyebrow}>Organizer Tools</Text>
+            <Text style={styles.heroTitle}>Create New Event</Text>
+            <Text style={styles.heroSub}>
+              Fill in the details below to publish your event to campus attendees.
+            </Text>
+          </Animated.View>
+
+          {/* ── White form sheet ── */}
+          <View style={styles.formSheet}>
+            <View style={styles.formHandle} />
+            <EventForm
+              categories={categories}
+              errorMessage={submissionError}
+              initialValues={INITIAL_VALUES}
+              isSubmitting={isSubmitting}
+              onStepChange={setCurrentStep}
+              onSubmit={handleSubmit}
+              onDescriptionFocus={handleDescriptionFocus}
+              onDirtyChange={handleDirtyChange}
+              resetKey="create-event"
+              submitLabel={isSubmitting ? 'Creating Event…' : 'Publish Event'}
+            />
           </View>
-
-          <Text style={styles.heroTitle}>Create New Event</Text>
-          <Text style={styles.heroSub}>
-            Fill in the details below to publish your event to campus attendees.
-          </Text>
-        </Animated.View>
-
-        {/* ── White form sheet ── */}
-        <View style={styles.formSheet}>
-          <View style={styles.formHandle} />
-          <EventForm
-            categories={categories}
-            errorMessage={submissionError}
-            initialValues={INITIAL_VALUES}
-            isSubmitting={isSubmitting}
-            onStepChange={setCurrentStep}
-            onSubmit={handleSubmit}
-            onDescriptionFocus={handleDescriptionFocus}
-            onDirtyChange={setIsDirty}
-            resetKey="create-event"
-            submitLabel={isSubmitting ? 'Creating Event…' : 'Publish Event ✦'}
-          />
-        </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -304,9 +305,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   heroEyebrow: {
-    fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#60A5FA',
-    letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6,
-    paddingTop: 8, paddingHorizontal: 10,
+    fontFamily: 'Inter_500Medium', fontSize: 12,
+    color: '#C7DAF8', letterSpacing: 0.5, marginBottom: 4,
   },
   heroTitle: {
     fontFamily: 'Inter_700Bold', fontSize: 28,
@@ -314,9 +314,8 @@ const styles = StyleSheet.create({
   },
   heroSub: {
     fontFamily: 'Inter_400Regular', fontSize: 14,
-    color: '#475569', lineHeight: 21, marginBottom: 20,
+    color: '#94A3B8', lineHeight: 21, marginBottom: 20,
   },
-
   stepTracker: { gap: spacing.xs },
   stepCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

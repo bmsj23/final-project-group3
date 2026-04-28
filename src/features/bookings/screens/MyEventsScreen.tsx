@@ -5,6 +5,8 @@ import { Image } from 'expo-image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -12,8 +14,10 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { DarkHero } from '../../../components/ui/DarkHero';
+import { EmptyStateCard } from '../../../components/ui/EmptyStateCard';
+import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { useAppSession } from '../../../providers/AppSessionProvider';
 import { colors } from '../../../theme/colors';
 import { radius } from '../../../theme/radius';
@@ -25,7 +29,6 @@ import type { EventSummary } from '../../events/types';
 
 type MyEventsScreenProps = AppTabScreenProps<'MyEvents'>;
 
-// Status badge color map
 const STATUS_COLORS: Record<string, { text: string; bg: string }> = {
   upcoming:  { text: '#60A5FA', bg: 'rgba(96,165,250,0.12)'  },
   ongoing:   { text: '#34D399', bg: 'rgba(52,211,153,0.12)'  },
@@ -66,7 +69,6 @@ function EventCard({
         style={({ pressed }) => [styles.card, pressed && { opacity: 0.88 }]}
         onPress={onPress}
       >
-        {/* Cover image */}
         <View style={styles.cardImageWrap}>
           {event.coverImageUrl ? (
             <Image
@@ -80,7 +82,6 @@ function EventCard({
               <Ionicons name="calendar" size={32} color="rgba(255,255,255,0.3)" />
             </View>
           )}
-          {/* Status badge overlay */}
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
             <Text style={[styles.statusText, { color: statusStyle.text }]}>
               {formatEventStatus(event.status)}
@@ -88,7 +89,6 @@ function EventCard({
           </View>
         </View>
 
-        {/* Card content */}
         <View style={styles.cardBody}>
           <Text style={styles.cardTitle} numberOfLines={2}>{event.title}</Text>
 
@@ -126,7 +126,6 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const hasFetched = useRef(false);
 
-  // Entrance animations
   const heroAnim = useRef(new Animated.Value(0)).current;
   const fabAnim  = useRef(new Animated.Value(0)).current;
 
@@ -170,12 +169,29 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
     }, [isGuest, loadMyEvents, profile]),
   );
 
-  // ── GUEST STATE ────────────────────────────────────────────────────────────
+  const statsSlot = (
+    <View style={styles.heroStats}>
+      {[
+        { label: 'Upcoming', value: events.filter(e => e.status === 'upcoming').length,  color: '#60A5FA' },
+        { label: 'Ongoing',  value: events.filter(e => e.status === 'ongoing').length,   color: '#34D399' },
+        { label: 'Done',     value: events.filter(e => e.status === 'completed').length, color: '#94A3B8' },
+      ].map((s, i, arr) => (
+        <View
+          key={s.label}
+          style={[styles.heroStatItem, i < arr.length - 1 && styles.heroStatBorder]}
+        >
+          <Text style={[styles.heroStatValue, { color: s.color }]}>{s.value}</Text>
+          <Text style={styles.heroStatLabel}>{s.label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+
+  // ── GUEST STATE ─────────────────────────────────────────────────────────────
   if (isGuest) {
     return (
-      <SafeAreaView style={styles.root} edges={[]}>
-        <StatusBar style="dark" />
-
+      <ScreenContainer bg={colors.bgDark} noPadding>
+        <StatusBar style="light" />
         <View style={styles.guestContainer}>
           <View style={styles.guestIconWrap}>
             <Ionicons name="calendar" size={40} color="#60A5FA" />
@@ -194,155 +210,127 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
             </View>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </ScreenContainer>
     );
   }
 
-  // ── AUTHENTICATED STATE ────────────────────────────────────────────────────
+  // ── AUTHENTICATED STATE ──────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.root} edges={[]}>
-      <StatusBar style="dark" />
-
-      <ScrollView
-        bounces={false}
-        overScrollMode="never"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-        refreshControl={
-          <RefreshControl
-            onRefresh={() => {
-              hasFetched.current = false;
-              void loadMyEvents(true);
-            }}
-            refreshing={isRefreshing}
-            tintColor={colors.primary}
-          />
-        }
+    <ScreenContainer bg={colors.bgDark} noPadding>
+      <StatusBar style="light" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardWrap}
       >
-        {/* ── HERO ── */}
-        <Animated.View
-          style={[
-            styles.hero,
-            {
-              opacity: heroAnim,
-              transform: [{ translateY: heroAnim.interpolate({ inputRange:[0,1], outputRange:[-20,0] }) }],
-            },
-          ]}
-        >
-          <View style={styles.heroTop}>
-            <View>
-              <Text style={styles.heroEyebrow}>Organizer Dashboard</Text>
-              <Text style={styles.heroTitle}>My Events</Text>
-            </View>
-            {/* Stats chip */}
-            <View style={styles.heroChip}>
-              <Text style={styles.heroChipCount}>{events.length}</Text>
-              <Text style={styles.heroChipLabel}>total</Text>
-            </View>
-          </View>
-
-          {/* Mini stat row */}
-          <View style={styles.heroStats}>
-            {[
-              { label: 'Upcoming', value: events.filter(e => e.status === 'upcoming').length,  color: '#60A5FA' },
-              { label: 'Ongoing',  value: events.filter(e => e.status === 'ongoing').length,   color: '#34D399' },
-              { label: 'Done',     value: events.filter(e => e.status === 'completed').length, color: '#94A3B8' },
-            ].map((s, i, arr) => (
-              <View key={s.label} style={[styles.heroStatItem, i < arr.length - 1 && styles.heroStatBorder]}>
-                <Text style={[styles.heroStatValue, { color: s.color }]}>{s.value}</Text>
-                <Text style={styles.heroStatLabel}>{s.label}</Text>
-              </View>
-            ))}
-          </View>
-        </Animated.View>
-
-        {/* ── WHITE BODY ── */}
-        <View style={styles.body}>
-          <View style={styles.bodyHandle} />
-
-          {/* Section header */}
-          <View style={styles.bodyHeader}>
-            <Text style={styles.bodyTitle}>Published Events</Text>
-            <Pressable
-              style={({ pressed }) => [styles.createBtn, pressed && { opacity: 0.88 }]}
-              onPress={() => navigation.navigate('CreateEvent')}
-            >
-              <View style={styles.createBtnSurface}>
-                <Ionicons name="add" size={18} color="#fff" />
-                <Text style={styles.createBtnText}>New</Text>
-              </View>
-            </Pressable>
-          </View>
-
-          {/* Content */}
-          {isLoading ? (
-            <View style={styles.emptyWrap}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="hourglass-outline" size={28} color={colors.primary} />
-              </View>
-              <Text style={styles.emptyTitle}>Loading your events…</Text>
-              <Text style={styles.emptySub}>Hang tight while we fetch your published events.</Text>
-            </View>
-          ) : errorMessage ? (
-            <View style={styles.emptyWrap}>
-              <View style={[styles.emptyIcon, { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
-                <Ionicons name="cloud-offline-outline" size={28} color="#EF4444" />
-              </View>
-              <Text style={styles.emptyTitle}>Couldn't load events</Text>
-              <Text style={styles.emptySub}>{errorMessage}</Text>
-              <Pressable
-                style={styles.retryBtn}
-                onPress={() => {
+        <View style={styles.screen}>
+          <ScrollView
+            bounces={false}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            overScrollMode="never"
+            refreshControl={
+              <RefreshControl
+                onRefresh={() => {
                   hasFetched.current = false;
-                  void loadMyEvents();
+                  void loadMyEvents(true);
                 }}
-              >
-                <Text style={styles.retryText}>Try Again</Text>
-              </Pressable>
-            </View>
-          ) : events.length === 0 ? (
-            <View style={styles.emptyWrap}>
-              <View style={styles.emptyIllustration}>
-                <Ionicons name="calendar-outline" size={40} color="rgba(255,255,255,0.6)" />
-              </View>
-              <Text style={styles.emptyTitle}>No events yet</Text>
-              <Text style={styles.emptySub}>
-                Tap the button below to create your first campus event and start getting attendees.
-              </Text>
-              <Pressable
-                style={({ pressed }) => [styles.emptyCreateBtn, pressed && { opacity: 0.85 }]}
-                onPress={() => navigation.navigate('CreateEvent')}
-              >
-                <View style={styles.emptyCreateSurface}>
-                  <Ionicons name="add-circle-outline" size={18} color="#fff" />
-                  <Text style={styles.emptyCreateText}>Create Your First Event</Text>
+                refreshing={isRefreshing}
+                tintColor={colors.primary}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+            style={styles.scroll}
+          >
+            <DarkHero
+              avatarInitials={profile?.full_name?.slice(0, 1) ?? undefined}
+              avatarUri={profile?.avatar_url ?? null}
+              eyebrow="Organizer Dashboard"
+              title="My Events"
+              rightSlot={
+                <View style={styles.heroChip}>
+                  <Text style={styles.heroChipCount}>{events.length}</Text>
+                  <Text style={styles.heroChipLabel}>total</Text>
                 </View>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={styles.list}>
-              {events.map((event, i) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  index={i}
-                  onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
-                />
-              ))}
-            </View>
-          )}
-        </View>
-      </ScrollView>
+              }
+              bottomSlot={statsSlot}
+            />
 
-      {/* ── Floating Action Button ── */}
+            <View style={styles.body}>
+              <View style={styles.bodyHeader}>
+                <Text style={styles.bodyTitle}>Published Events</Text>
+                <Pressable
+                  style={({ pressed }) => [styles.createBtn, pressed && { opacity: 0.88 }]}
+                  onPress={() => navigation.navigate('CreateEvent')}
+                >
+                  <View style={styles.createBtnSurface}>
+                    <Ionicons name="add" size={18} color="#fff" />
+                    <Text style={styles.createBtnText}>New</Text>
+                  </View>
+                </Pressable>
+              </View>
+
+              {isLoading ? (
+                <EmptyStateCard
+                  body="Hang tight while we fetch your published events."
+                  icon="hourglass-outline"
+                  title="Loading your events…"
+                />
+              ) : errorMessage ? (
+                <View>
+                  <EmptyStateCard
+                    body={errorMessage}
+                    icon="cloud-offline-outline"
+                    title="Couldn't load events"
+                  />
+                  <Pressable
+                    style={styles.retryBtn}
+                    onPress={() => {
+                      hasFetched.current = false;
+                      void loadMyEvents();
+                    }}
+                  >
+                    <Text style={styles.retryText}>Try Again</Text>
+                  </Pressable>
+                </View>
+              ) : events.length === 0 ? (
+                <View>
+                  <EmptyStateCard
+                    body="Tap the button below to create your first campus event and start getting attendees."
+                    icon="calendar-outline"
+                    title="No events yet"
+                  />
+                  <Pressable
+                    style={({ pressed }) => [styles.emptyCreateBtn, pressed && { opacity: 0.85 }]}
+                    onPress={() => navigation.navigate('CreateEvent')}
+                  >
+                    <View style={styles.emptyCreateSurface}>
+                      <Ionicons name="add-circle-outline" size={18} color="#fff" />
+                      <Text style={styles.emptyCreateText}>Create Your First Event</Text>
+                    </View>
+                  </Pressable>
+                </View>
+              ) : (
+                <View style={styles.list}>
+                  {events.map((event, i) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      index={i}
+                      onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
+                    />
+                  ))}
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+
       {!isLoading && (
         <Animated.View
           style={[
             styles.fab,
-            {
-              transform: [{ scale: fabAnim }],
-              opacity: fabAnim,
-            },
+            { transform: [{ scale: fabAnim }], opacity: fabAnim },
           ]}
         >
           <Pressable
@@ -357,35 +345,19 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
           </Pressable>
         </Animated.View>
       )}
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#EEF4FF' },
-  scroll: { flexGrow: 1 },
+  // Both dark — covers ScreenContainer's white SafeAreaView during mount
+  keyboardWrap: { flex: 1, backgroundColor: colors.bgDark },
+  screen: { backgroundColor: colors.bgDark, flex: 1 },
 
-  // Hero
-  hero: {
-    marginTop: spacing.md,
-    marginHorizontal: layout.screenPaddingH,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    backgroundColor: colors.primaryDark,
-    borderRadius: radius.xl,
-  },
-  heroTop: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    justifyContent: 'space-between', marginBottom: spacing.md,
-  },
-  heroEyebrow: {
-    fontFamily: 'Inter_500Medium', fontSize: 12,
-    color: '#C7DAF8', letterSpacing: 0.5, marginBottom: 4,
-  },
-  heroTitle: {
-    fontFamily: 'Inter_700Bold', fontSize: 30,
-    color: '#FFFFFF', letterSpacing: -0.6,
-  },
+  scroll: { backgroundColor: 'transparent', flex: 1 },
+  content: { flexGrow: 1 },
+
+  // Hero chip
   heroChip: {
     backgroundColor: 'rgba(255,255,255,0.14)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)',
@@ -395,41 +367,34 @@ const styles = StyleSheet.create({
   heroChipCount: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
   heroChipLabel: { fontFamily: 'Inter_400Regular', fontSize: 10, color: '#D6E4FA', textTransform: 'uppercase', letterSpacing: 0.5 },
 
+  // Stats
   heroStats: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)',
-    borderRadius: radius.xl, paddingVertical: 14,
+    borderRadius: radius.xl,
+    paddingVertical: 14,
   },
   heroStatItem: { flex: 1, alignItems: 'center', gap: 3 },
   heroStatBorder: { borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.2)' },
   heroStatValue: { fontFamily: 'Inter_700Bold', fontSize: 20 },
   heroStatLabel: { fontFamily: 'Inter_400Regular', fontSize: 10, color: '#D6E4FA', textTransform: 'uppercase', letterSpacing: 0.4 },
 
-  // Body sheet
+  // Body
   body: {
-    flex: 1,
-    marginTop: spacing.lg,
-    backgroundColor: '#F8FBFF',
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    paddingTop: 16, paddingBottom: 100,
-    minHeight: 500,
-    borderTopWidth: 1,
-    borderTopColor: '#DDE7F6',
-  },
-  bodyHandle: {
-    width: 40, height: 5, borderRadius: 3,
-    backgroundColor: '#CBD5E1', alignSelf: 'center', marginBottom: 20,
+    backgroundColor: colors.background,
+    gap: spacing.xl,
+    paddingBottom: spacing.xxl,
+    paddingHorizontal: layout.screenPaddingH,
+    paddingTop: spacing.xl,
   },
   bodyHeader: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: layout.screenPaddingH, marginBottom: 16,
+    marginBottom: spacing.md,
   },
   bodyTitle: { fontFamily: 'Inter_700Bold', fontSize: 20, color: '#0F172A' },
-  createBtn: {
-    borderRadius: radius.full,
-  },
+  createBtn: { borderRadius: radius.full },
   createBtnSurface: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     minHeight: 42, gap: spacing.xs,
@@ -440,7 +405,7 @@ const styles = StyleSheet.create({
   createBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#fff' },
 
   // Event card
-  list: { paddingHorizontal: layout.screenPaddingH, gap: spacing.md },
+  list: { gap: spacing.md },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: radius.xl,
@@ -459,8 +424,7 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 10, left: 10,
     paddingHorizontal: 12, paddingVertical: 5,
     borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.24)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)',
   },
   statusText: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase' },
   cardBody: { padding: spacing.md, gap: 8 },
@@ -477,24 +441,13 @@ const styles = StyleSheet.create({
   },
 
   // Empty states
-  emptyWrap: { alignItems: 'center', paddingHorizontal: layout.screenPaddingH, paddingTop: 40, gap: 12 },
-  emptyIcon: {
-    width: 64, height: 64, borderRadius: 32,
-    backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center',
-  },
-  emptyIllustration: {
-    width: 100, height: 100, borderRadius: 28,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
-    backgroundColor: colors.primaryDark,
-  },
-  emptyTitle: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#0F172A', textAlign: 'center' },
-  emptySub: { fontFamily: 'Inter_400Regular', fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 20 },
   retryBtn: {
     backgroundColor: '#EFF6FF', borderRadius: radius.full,
-    paddingHorizontal: 20, paddingVertical: 10, marginTop: 4,
+    paddingHorizontal: 20, paddingVertical: 10, marginTop: spacing.md,
+    alignSelf: 'center',
   },
   retryText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: colors.primary },
-  emptyCreateBtn: { borderRadius: radius.md, overflow: 'hidden', marginTop: 8, width: '100%' },
+  emptyCreateBtn: { borderRadius: radius.md, overflow: 'hidden', marginTop: spacing.lg, width: '100%' },
   emptyCreateSurface: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     minHeight: 52, gap: spacing.xs,
@@ -517,11 +470,8 @@ const styles = StyleSheet.create({
   guestSub: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#475569', textAlign: 'center', lineHeight: 22 },
   guestBtn: { borderRadius: radius.md, overflow: 'hidden', width: '100%', marginTop: 8 },
   guestBtnSurface: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 54,
-    gap: spacing.xs,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    minHeight: 54, gap: spacing.xs,
     backgroundColor: colors.primaryDark,
   },
   guestBtnText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#fff' },
@@ -537,11 +487,8 @@ const styles = StyleSheet.create({
   },
   fabBtn: { borderRadius: 32 },
   fabSurface: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 58, height: 58, borderRadius: 29,
+    alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.primaryDark,
   },
 });

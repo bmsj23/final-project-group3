@@ -224,12 +224,11 @@ function NavRow({
         onPress={onNext}
       >
         <LinearGradient
-          colors={(nextColor ?? ['#2563EB', '#1D4ED8']) as [string, string, ...string[]]}
+          colors={[colors.primary, colors.primaryDark] as [string, string]}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
           style={navStyles.nextGrad}
         >
           <Text style={navStyles.nextText}>{nextLabel}</Text>
-          <Ionicons name="arrow-forward" size={16} color="#fff" />
         </LinearGradient>
       </Pressable>
     </View>
@@ -1076,7 +1075,6 @@ export function EventForm({
               onNext={() => void handleSubmit()}
               nextLabel={submitLabel}
               nextDisabled={isSubmitting}
-              nextColor={['#10B981', '#059669']}
             />
           </View>
         )}
@@ -1159,7 +1157,7 @@ const styles = StyleSheet.create({
 
   galleryContainer: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    marginTop: -spacing.sm,   // pull gallery up against the cover zone
+    marginTop: -spacing.sm,   
     marginBottom: -spacing.xs,
   },
   galleryScroll: { flex: 1, height: 70 },

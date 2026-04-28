@@ -43,19 +43,13 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
   const [isSubmitting, setIsSubmitting]       = useState(false);
   const [screenError, setScreenError]         = useState<string | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
   const isDirtyRef = useRef(false);
 
-  function updateIsDirty(value: boolean) {
-    isDirtyRef.current = value;
-    setIsDirty(value);
-  }
   const scrollRef = useRef<ScrollView | null>(null);
   const handleDescriptionFocus = useCallback(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
   }, []);
 
-  // Memoize so the form doesn't reset on every re-render
   const initialValues = useMemo(
     () => (event ? mapEventDetailToFormValues(event) : null),
     [event],
@@ -86,28 +80,26 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
 
   useEffect(() => { void loadEditorData(); }, [loadEditorData]);
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (!isDirtyRef.current) return;
+  // Keep ref in sync — no state needed, ref is always current
+  const handleDirtyChange = useCallback((value: boolean) => {
+    isDirtyRef.current = value;
+  }, []);
 
-      e.preventDefault();
-
-      Alert.alert(
-        'Discard changes?',
-        'You have unsaved changes. Are you sure you want to leave without saving?',
-        [
-          { text: 'Keep Editing', onPress: () => {}, style: 'cancel' },
-          {
-            text: 'Discard',
-            onPress: () => navigation.dispatch(e.data.action),
-            style: 'destructive',
-          },
-        ],
-      );
-    });
-
-    return unsubscribe;
-  }, [navigation]); // no isDirty in deps — ref is always current
+  // Replace beforeRemove — intercept back manually
+  const handleBack = useCallback(() => {
+    if (!isDirtyRef.current) {
+      navigation.goBack();
+      return;
+    }
+    Alert.alert(
+      'Discard changes?',
+      'You have unsaved changes. Are you sure you want to leave without saving?',
+      [
+        { text: 'Keep Editing', style: 'cancel' },
+        { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
+      ],
+    );
+  }, [navigation]);
 
   const handleSubmit = useCallback(
     async ({ existingImageRemoved, originalCoverImageUrl, selectedImage, values }: EventFormSubmission) => {
@@ -116,24 +108,13 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
       setIsSubmitting(true);
       setSubmissionError(null);
       let uploadedImagePath: string | null = null;
-
-      // Start with whatever the form says the cover URL should be.
-      // If the user didn't remove the existing image, this is the original URL.
-      // If they removed it, this is null.
       let nextCoverImageUrl = values.coverImageUrl ?? null;
 
       try {
         if (selectedImage) {
           if (!existingImageRemoved && originalCoverImageUrl) {
-            // User added a new photo WITHOUT removing the existing one.
-            // The event only stores one coverImageUrl, so we keep the original
-            // and discard the newly picked image — it's supplementary only in
-            // the local gallery UI. The original persists as the stored cover.
-            // (If you want to replace the cover, users should clear first then add.)
             nextCoverImageUrl = originalCoverImageUrl;
           } else {
-            // User explicitly removed the existing cover then added a new one,
-            // OR there was no existing cover. Upload the new image.
             const { data, error } = await uploadEventImage(profile.id, selectedImage);
             if (error || !data) throw error ?? new Error('Cover image upload failed.');
             uploadedImagePath = data.path;
@@ -147,13 +128,10 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
           throw error;
         }
 
-        // Only delete the original file from storage when the user explicitly
-        // removed it and a new image was uploaded to replace it.
         if (existingImageRemoved && originalCoverImageUrl && uploadedImagePath) {
           await deleteEventImageFromPublicUrl(originalCoverImageUrl);
         }
 
-        setIsDirty(false);
         isDirtyRef.current = false;
         navigation.goBack();
       } catch (err) {
@@ -216,7 +194,7 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
             <Pressable style={styles.stateBtn} onPress={() => void loadEditorData()}>
               <Text style={styles.stateBtnText}>Try Again</Text>
             </Pressable>
-            <Pressable style={styles.stateSecBtn} onPress={() => navigation.goBack()}>
+            <Pressable style={styles.stateSecBtn} onPress={handleBack}>
               <Text style={styles.stateSecBtnText}>Go Back</Text>
             </Pressable>
           </View>
@@ -304,24 +282,20 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
             ]}
           >
             <View style={styles.heroTopRow}>
+              {/* Back button now calls handleBack instead of navigation.goBack() */}
               <Pressable
                 accessibilityRole="button"
                 style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
-                onPress={() => navigation.goBack()}
+                onPress={handleBack}
               >
                 <Ionicons name="chevron-back" size={20} color="#CBD5E1" />
               </Pressable>
             </View>
+            <Text style={styles.heroEyebrow}>Organizer Tools</Text>
             <Text style={styles.heroTitle}>Edit Event</Text>
             <Text style={styles.heroSub}>
               Update the details, schedule, or cover image for your event.
             </Text>
-
-            {/* Editing chip */}
-            <View style={styles.editingChip}>
-              <Ionicons name="calendar-outline" size={13} color="#FBBF24" />
-              <Text style={styles.editingChipText} numberOfLines={1}>{event.title}</Text>
-            </View>
           </Animated.View>
 
           {/* ── White form sheet ── */}
@@ -335,9 +309,9 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
               onStepChange={() => {}}
               onSubmit={handleSubmit}
               onDescriptionFocus={handleDescriptionFocus}
-              onDirtyChange={updateIsDirty}
+              onDirtyChange={handleDirtyChange}
               resetKey={`${event.id}:${event.updatedAt}`}
-              submitLabel={isSubmitting ? 'Saving Changes…' : 'Save Changes ✦'}
+              submitLabel={isSubmitting ? 'Saving Changes…' : 'Save Changes'}
             />
           </View>
         </ScrollView>
@@ -395,17 +369,16 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   heroEyebrow: {
-    fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#FBBF24',
-    letterSpacing: 1.5, textTransform: 'uppercase',
-    paddingTop: 8, paddingHorizontal: 10,
+    fontFamily: 'Inter_500Medium', fontSize: 12,
+    color: '#C7DAF8', letterSpacing: 0.5, marginBottom: 4,
   },
   heroTitle: {
     fontFamily: 'Inter_700Bold', fontSize: 28,
-    color: '#F1F5F9', letterSpacing: -0.5, marginBottom: 6,
+    color: '#E2E8F0', letterSpacing: -0.5, marginBottom: 6,
   },
   heroSub: {
     fontFamily: 'Inter_400Regular', fontSize: 14,
-    color: '#475569', lineHeight: 21, marginBottom: 14,
+    color: '#94A3B8', lineHeight: 21, marginBottom: 14,
   },
   editingChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
