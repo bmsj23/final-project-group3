@@ -55,7 +55,6 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
   }, []);
 
-  // Memoize so the form doesn't reset on every re-render
   const initialValues = useMemo(
     () => (event ? mapEventDetailToFormValues(event) : null),
     [event],
@@ -99,7 +98,7 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
           { text: 'Keep Editing', onPress: () => {}, style: 'cancel' },
           {
             text: 'Discard',
-            onPress: () => navigation.dispatch(e.data.action),
+            onPress: () => navigation.goBack(),
             style: 'destructive',
           },
         ],
@@ -312,16 +311,11 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
                 <Ionicons name="chevron-back" size={20} color="#CBD5E1" />
               </Pressable>
             </View>
+            <Text style={styles.heroEyebrow}>Organizer Tools</Text>
             <Text style={styles.heroTitle}>Edit Event</Text>
             <Text style={styles.heroSub}>
               Update the details, schedule, or cover image for your event.
             </Text>
-
-            {/* Editing chip */}
-            <View style={styles.editingChip}>
-              <Ionicons name="calendar-outline" size={13} color="#FBBF24" />
-              <Text style={styles.editingChipText} numberOfLines={1}>{event.title}</Text>
-            </View>
           </Animated.View>
 
           {/* ── White form sheet ── */}
@@ -337,7 +331,7 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
               onDescriptionFocus={handleDescriptionFocus}
               onDirtyChange={updateIsDirty}
               resetKey={`${event.id}:${event.updatedAt}`}
-              submitLabel={isSubmitting ? 'Saving Changes…' : 'Save Changes ✦'}
+              submitLabel={isSubmitting ? 'Saving Changes…' : 'Save Changes'}
             />
           </View>
         </ScrollView>
@@ -395,17 +389,16 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   heroEyebrow: {
-    fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#FBBF24',
-    letterSpacing: 1.5, textTransform: 'uppercase',
-    paddingTop: 8, paddingHorizontal: 10,
+    fontFamily: 'Inter_500Medium', fontSize: 12,
+    color: '#C7DAF8', letterSpacing: 0.5, marginBottom: 4,
   },
   heroTitle: {
     fontFamily: 'Inter_700Bold', fontSize: 28,
-    color: '#F1F5F9', letterSpacing: -0.5, marginBottom: 6,
+    color: '#E2E8F0', letterSpacing: -0.5, marginBottom: 6,
   },
   heroSub: {
     fontFamily: 'Inter_400Regular', fontSize: 14,
-    color: '#475569', lineHeight: 21, marginBottom: 14,
+    color: '#94A3B8', lineHeight: 21, marginBottom: 14,
   },
   editingChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,

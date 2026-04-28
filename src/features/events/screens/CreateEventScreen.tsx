@@ -86,7 +86,7 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
           { text: 'Keep Editing', onPress: () => {}, style: 'cancel' },
           {
             text: 'Discard',
-            onPress: () => navigation.dispatch(e.data.action),
+            onPress: () => navigation.goBack(),
             style: 'destructive',
           },
         ],
@@ -228,7 +228,7 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
               <Ionicons name="chevron-back" size={20} color="#CBD5E1" />
             </Pressable>
           </View>
-
+          <Text style={styles.heroEyebrow}>Organizer Tools</Text>
           <Text style={styles.heroTitle}>Create New Event</Text>
           <Text style={styles.heroSub}>
             Fill in the details below to publish your event to campus attendees.
@@ -248,7 +248,7 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
             onDescriptionFocus={handleDescriptionFocus}
             onDirtyChange={setIsDirty}
             resetKey="create-event"
-            submitLabel={isSubmitting ? 'Creating Event…' : 'Publish Event ✦'}
+            submitLabel={isSubmitting ? 'Creating Event…' : 'Publish Event'}
           />
         </View>
         </ScrollView>
@@ -304,9 +304,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   heroEyebrow: {
-    fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#60A5FA',
-    letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6,
-    paddingTop: 8, paddingHorizontal: 10,
+    fontFamily: 'Inter_500Medium', fontSize: 12,
+    color: '#C7DAF8', letterSpacing: 0.5, marginBottom: 4,
   },
   heroTitle: {
     fontFamily: 'Inter_700Bold', fontSize: 28,
@@ -314,9 +313,8 @@ const styles = StyleSheet.create({
   },
   heroSub: {
     fontFamily: 'Inter_400Regular', fontSize: 14,
-    color: '#475569', lineHeight: 21, marginBottom: 20,
+    color: '#94A3B8', lineHeight: 21, marginBottom: 20,
   },
-
   stepTracker: { gap: spacing.xs },
   stepCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
