@@ -121,7 +121,7 @@ function EventCard({
 export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
   const { isGuest, profile, signOut } = useAppSession();
   const [events, setEvents] = useState<EventSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const hasFetched = useRef(false);
@@ -162,9 +162,7 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
         if (!hasFetched.current) {
           hasFetched.current = true;
           void loadMyEvents();
-        } else {
-          void loadMyEvents(true);
-        }
+        } 
       }
     }, [isGuest, loadMyEvents, profile]),
   );
@@ -218,10 +216,7 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
   return (
     <ScreenContainer bg={colors.bgDark} noPadding>
       <StatusBar style="light" />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardWrap}
-      >
+
         <View style={styles.screen}>
           <ScrollView
             bounces={false}
@@ -315,7 +310,6 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
             </View>
           </ScrollView>
         </View>
-      </KeyboardAvoidingView>
 
       {!isLoading && (
         null
@@ -363,6 +357,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 32,
     gap: spacing.xl,
     marginTop: -12,
+    minHeight: 500,
     paddingBottom: spacing.xxl,
     paddingHorizontal: layout.screenPaddingH,
     paddingTop: spacing.xl,
