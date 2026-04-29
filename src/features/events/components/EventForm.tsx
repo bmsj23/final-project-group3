@@ -44,7 +44,8 @@ import {
 // ─── Public types ─────────────────────────────────────────────────────────────
 export type EventFormSubmission = {
   values: EventFormValues;
-  selectedImage: EventImageAsset | null;
+  selectedImages: EventImageAsset[];
+  existingImageUrls: string[];
   originalCoverImageUrl: string | null;
   coverImageChanged: boolean;
   existingImageRemoved: boolean; // true only when user explicitly removed the original
@@ -279,7 +280,7 @@ function validateStep1(
   if (!dt || !isFutureIsoDate(dt)) errs.dateTime = 'Event date must be a valid future date.';
   if (!ddl || !isFutureIsoDate(ddl)) errs.registrationDeadline = 'Deadline must be a valid future date.';
   else if (dt && !isRegistrationDeadlineBeforeEvent(ddl, dt))
-    errs.registrationDeadline = 'Deadline cannot be after the event date and time.';
+    errs.registrationDeadline = 'Deadline must be earlier than the event date and time.';
   return errs;
 }
 
@@ -399,8 +400,12 @@ export function EventForm({
   const [errors, setErrors] = useState<EventFormErrors>({});
   const [selectedImages, setSelectedImages] = useState<EventImageAsset[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [existingSelected, setExistingSelected] = useState(true); // true = existing cover is the active preview
-  const [removeExisting, setRemoveExisting] = useState(false);
+  const [existingSelected, setExistingSelected] = useState(true);
+  const [existingImageIndex, setExistingImageIndex] = useState(0);
+  const initialExistingImageUrls = initialValues.imageUrls?.length
+    ? initialValues.imageUrls
+    : (initialValues.coverImageUrl ? [initialValues.coverImageUrl] : []);
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>(initialExistingImageUrls);
   const [step, setStep] = useState(0);
   const [activePicker, setActivePicker] = useState<PickerTarget | null>(null);
   const galleryScrollRef = useRef<ScrollView | null>(null);
@@ -425,8 +430,9 @@ export function EventForm({
     setErrors({});
     setSelectedImages([]);
     setSelectedImageIndex(0);
+    setExistingImageUrls(initialValues.imageUrls?.length ? initialValues.imageUrls : (initialValues.coverImageUrl ? [initialValues.coverImageUrl] : []));
+    setExistingImageIndex(0);
     setExistingSelected(true);
-    setRemoveExisting(false);
     setStep(0);
     setActivePicker(null);
     onStepChange?.(0);
@@ -437,6 +443,9 @@ export function EventForm({
     const initialDateTimeInput = formatDateTimeInput(initialValues.dateTime);
     const initialDeadlineInput = formatDateTimeInput(initialValues.registrationDeadline);
     const initialTagsInput = tagsToInput(initialValues.tags);
+    const initialImageUrls = initialValues.imageUrls?.length
+      ? initialValues.imageUrls
+      : (initialValues.coverImageUrl ? [initialValues.coverImageUrl] : []);
 
     const isDirty =
       values.title !== initialValues.title ||
@@ -447,8 +456,8 @@ export function EventForm({
       dateTimeInput !== initialDateTimeInput ||
       deadlineInput !== initialDeadlineInput ||
       tagsInput !== initialTagsInput ||
+      initialImageUrls.join('|') !== existingImageUrls.join('|') ||
       selectedImages.length > 0 ||
-      removeExisting ||
       step > 0;
 
     onDirtyChange?.(isDirty);
@@ -456,9 +465,9 @@ export function EventForm({
     capacityInput,
     dateTimeInput,
     deadlineInput,
+    existingImageUrls,
     initialValues,
     onDirtyChange,
-    removeExisting,
     selectedImages,
     step,
     tagsInput,
@@ -468,7 +477,7 @@ export function EventForm({
   // ── Derived preview URI ─────────────────────────────────────────────────
   // Show the existing cover when it's selected and not removed,
   // otherwise show whichever new image is active.
-  const existingCoverUri = removeExisting ? null : (initialValues.coverImageUrl ?? null);
+  const existingCoverUri = existingImageUrls[existingImageIndex] ?? null;
   const previewUri =
     existingSelected && existingCoverUri
       ? existingCoverUri
@@ -500,7 +509,22 @@ export function EventForm({
       return updated;
     });
     setExistingSelected(false);
-    setRemoveExisting(false);
+  }
+
+  function handleRemoveExistingImage(index: number) {
+    setExistingImageUrls((prev) => {
+      const next = prev.filter((_, currentIndex) => currentIndex !== index);
+      setExistingImageIndex((current) => Math.min(current, Math.max(0, next.length - 1)));
+
+      if (existingSelected && index === existingImageIndex) {
+        setExistingSelected(next.length > 0);
+        if (next.length === 0 && selectedImages.length > 0) {
+          setExistingSelected(false);
+        }
+      }
+
+      return next;
+    });
   }
 
   function handleRemoveImage(index: number) {
@@ -510,16 +534,15 @@ export function EventForm({
       setSelectedImageIndex(Math.min(selectedImageIndex, Math.max(0, newImages.length - 1)));
       // If no new images remain, fall back to showing the existing cover
       if (newImages.length === 0) setExistingSelected(true);
-      return;
     }
-    if (initialValues.coverImageUrl) setRemoveExisting(v => !v);
   }
 
   function handleClearAll() {
+    setExistingImageUrls([]);
     setSelectedImages([]);
     setSelectedImageIndex(0);
+    setExistingImageIndex(0);
     setExistingSelected(true);
-    setRemoveExisting(true);
   }
 
   function scrollGalleryLeft() {
@@ -595,10 +618,8 @@ export function EventForm({
     const nextValues: EventFormValues = {
       ...values,
       capacity: Number.isFinite(parsedCap) ? parsedCap : 0,
-      // Keep original URL unless user explicitly removed it.
-      // If a new image was selected, EditEventScreen will overwrite this with
-      // the uploaded URL — the original is NOT deleted unless removeExisting is true.
-      coverImageUrl: removeExisting ? null : initialValues.coverImageUrl ?? null,
+      coverImageUrl: existingImageUrls[0] ?? null,
+      imageUrls: existingImageUrls,
       dateTime: parseDateTimeInput(dateTimeInput),
       registrationDeadline: parseDateTimeInput(deadlineInput),
       tags: tagsFromInput(tagsInput),
@@ -614,10 +635,11 @@ export function EventForm({
     }
     await onSubmit({
       values: nextValues,
-      selectedImage: selectedImages.length > 0 ? selectedImages[0] : null,
+      selectedImages,
+      existingImageUrls,
       originalCoverImageUrl: initialValues.coverImageUrl ?? null,
-      coverImageChanged: selectedImages.length > 0 || removeExisting,
-      existingImageRemoved: removeExisting,
+      coverImageChanged: selectedImages.length > 0 || initialExistingImageUrls.join('|') !== existingImageUrls.join('|'),
+      existingImageRemoved: initialExistingImageUrls.length > 0 && existingImageUrls.length === 0,
     });
   }
 
@@ -766,7 +788,7 @@ export function EventForm({
 
               {/* Images gallery - Horizontal scrollable
                   Shows the existing cover (if any, not removed) + all newly picked images */}
-              {(selectedImages.length > 0 || (initialValues.coverImageUrl && !removeExisting)) && (
+              {(selectedImages.length > 0 || existingImageUrls.length > 0) && (
                 <View style={styles.galleryContainer}>
                   <ScrollView
                     ref={galleryScrollRef}
@@ -776,24 +798,26 @@ export function EventForm({
                     style={styles.galleryScroll}
                     contentContainerStyle={styles.galleryScrollContent}
                   >
-                    {/* Existing cover thumbnail — always visible until explicitly removed */}
-                    {initialValues.coverImageUrl && !removeExisting && (
-                      <View style={styles.galleryThumbWrap}>
+                    {existingImageUrls.map((imageUrl, idx) => (
+                      <View key={`existing-${idx}-${imageUrl}`} style={styles.galleryThumbWrap}>
                         <Pressable
-                          style={[styles.galleryThumbnail, existingSelected && styles.galleryThumbnailActive]}
-                          onPress={() => setExistingSelected(true)}
+                          style={[styles.galleryThumbnail, existingSelected && idx === existingImageIndex && styles.galleryThumbnailActive]}
+                          onPress={() => {
+                            setExistingImageIndex(idx);
+                            setExistingSelected(true);
+                          }}
                         >
-                          <Image contentFit="cover" source={{ uri: initialValues.coverImageUrl }} style={styles.galleryThumbImage} transition={150} />
+                          <Image contentFit="cover" source={{ uri: imageUrl }} style={styles.galleryThumbImage} transition={150} />
                         </Pressable>
                         <Pressable
                           style={styles.galleryThumbRemoveBtn}
-                          onPress={() => { setRemoveExisting(true); setExistingSelected(false); }}
+                          onPress={() => handleRemoveExistingImage(idx)}
                           hitSlop={6}
                         >
                           <Ionicons name="close" size={10} color="#fff" />
                         </Pressable>
                       </View>
-                    )}
+                    ))}
                     {selectedImages.map((img, idx) => (
                       <View key={`${idx}-${img.fileName}`} style={styles.galleryThumbWrap}>
                         <Pressable
@@ -822,13 +846,13 @@ export function EventForm({
                 </View>
               )}
 
-              {(previewUri || selectedImages.length > 0 || (initialValues.coverImageUrl && !removeExisting)) && (
+              {(previewUri || selectedImages.length > 0 || existingImageUrls.length > 0) && (
                 <View style={styles.imageBtnGroup}>
                   <Pressable style={styles.removeImgBtn} onPress={() => void handlePickImage()}>
                     <Ionicons name="add-circle-outline" size={14} color="#2563EB" />
                     <Text style={styles.removeImgText} numberOfLines={1}>Add Photos</Text>
                   </Pressable>
-                  {(selectedImages.length > 0 || (initialValues.coverImageUrl && !removeExisting)) && (
+                  {(selectedImages.length > 0 || existingImageUrls.length > 0) && (
                     <Pressable style={styles.removeImgBtn} onPress={handleClearAll}>
                       <Ionicons name="trash-outline" size={14} color="#EF4444" />
                       <Text style={[styles.removeImgText, { color: '#EF4444' }]}>Clear All</Text>
@@ -937,7 +961,7 @@ export function EventForm({
               <View style={styles.hintBox}>
                 <Ionicons name="information-circle-outline" size={16} color="#60A5FA" />
                 <Text style={styles.hintBoxText}>
-                  Registration must be on or before the event date and time.
+                  Registration must close before the event starts.
                 </Text>
               </View>
 

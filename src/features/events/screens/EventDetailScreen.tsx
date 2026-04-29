@@ -7,6 +7,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  Dimensions,
+  FlatList,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { PinchGestureHandler, State as GestureState } from 'react-native-gesture-handler';
 import { isAdminRole } from '../../auth/contracts';
 import { useEventFavorites } from '../FavoritesProvider';
 import { useAppSession } from '../../../providers/AppSessionProvider';
@@ -49,6 +53,51 @@ const STATUS_COLORS: Record<string, { text: string; bg: string }> = {
   cancelled: { text: '#EF4444', bg: 'rgba(239,68,68,0.1)'   },
 };
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+function ZoomableImage({ uri }: { uri: string }) {
+  const baseScale = useRef(new Animated.Value(1)).current;
+  const pinchScale = useRef(new Animated.Value(1)).current;
+  const scale = useMemo(() => Animated.multiply(baseScale, pinchScale), [baseScale, pinchScale]);
+  const lastScale = useRef(1);
+
+  const handlePinchEvent = Animated.event(
+    [{ nativeEvent: { scale: pinchScale } }],
+    { useNativeDriver: true },
+  );
+
+  const handlePinchStateChange = useCallback((event: { nativeEvent: { oldState: number; scale: number } }) => {
+    if (event.nativeEvent.oldState === GestureState.ACTIVE) {
+      lastScale.current = Math.min(Math.max(lastScale.current * event.nativeEvent.scale, 1), 4);
+      baseScale.setValue(lastScale.current);
+      pinchScale.setValue(1);
+    }
+  }, [baseScale, pinchScale]);
+
+  const handleReset = useCallback(() => {
+    lastScale.current = 1;
+    baseScale.setValue(1);
+    pinchScale.setValue(1);
+  }, [baseScale, pinchScale]);
+
+  return (
+    <View style={styles.viewerSlide}>
+      <PinchGestureHandler
+        onGestureEvent={handlePinchEvent}
+        onHandlerStateChange={handlePinchStateChange}
+      >
+        <Animated.View style={[styles.viewerImageWrap, { transform: [{ scale }] }]}>
+          <Image contentFit="contain" source={{ uri }} style={styles.viewerImage} transition={150} />
+        </Animated.View>
+      </PinchGestureHandler>
+      <Pressable style={styles.viewerResetBtn} onPress={handleReset}>
+        <Ionicons name="refresh" size={16} color="#E2E8F0" />
+        <Text style={styles.viewerResetText}>Reset</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
@@ -68,8 +117,11 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
   const [isCancellingBooking, setIsCancellingBooking] = useState(false);
   const [bookingErrorMessage, setBookingErrorMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const sheetAnim = useRef(new Animated.Value(0)).current;
+  const viewerListRef = useRef<FlatList<string> | null>(null);
 
   const loadEvent = useCallback(async () => {
     setIsLoading(true);
@@ -122,6 +174,20 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
   const isSaved = event ? isFavorited(event.id) : false;
   const statusStyle = STATUS_COLORS[event?.status ?? 'upcoming'] ?? STATUS_COLORS.upcoming;
   const isAuthenticated = Boolean(profile?.id);
+  const eventGallery = event?.imageUrls?.length ? event.imageUrls : (event?.coverImageUrl ? [event.coverImageUrl] : []);
+
+  const openViewer = useCallback((index: number) => {
+    setViewerIndex(index);
+    setViewerVisible(true);
+  }, []);
+
+  useEffect(() => {
+    if (viewerVisible) {
+      setTimeout(() => {
+        viewerListRef.current?.scrollToIndex({ index: viewerIndex, animated: false });
+      }, 0);
+    }
+  }, [viewerIndex, viewerVisible]);
 
   const maxSelectableTickets = useMemo(() => {
     if (!event) {
@@ -243,7 +309,9 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
     try {
       const { error } = await deleteOwnEvent(event.id);
       if (error) throw error;
-      if (event.coverImageUrl) await deleteEventImageFromPublicUrl(event.coverImageUrl);
+      for (const imageUrl of event.imageUrls) {
+        await deleteEventImageFromPublicUrl(imageUrl);
+      }
       if (isOwner) {
         navigation.reset({ index: 0, routes: [{ name: 'Tabs', params: { screen: 'MyEvents' } }] });
       } else {
@@ -364,6 +432,44 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
       <StatusBar style="light" />
       <LinearGradient colors={['#060D1F', '#0F1E3D', '#1E3A8A']} style={StyleSheet.absoluteFill} />
 
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setViewerVisible(false)}
+        transparent
+        visible={viewerVisible}
+      >
+        <View style={styles.viewerModal}>
+          <View style={styles.viewerTopBar}>
+            <Text style={styles.viewerCounter}>
+              {viewerIndex + 1} / {eventGallery.length}
+            </Text>
+            <Pressable style={styles.viewerCloseBtn} onPress={() => setViewerVisible(false)}>
+              <Ionicons name="close" size={24} color="#FFFFFF" />
+            </Pressable>
+          </View>
+          <FlatList
+            ref={viewerListRef}
+            data={eventGallery}
+            getItemLayout={(_, index) => ({
+              index,
+              length: SCREEN_WIDTH,
+              offset: SCREEN_WIDTH * index,
+            })}
+            horizontal
+            initialNumToRender={1}
+            keyExtractor={(item, index) => `${item}-${index}`}
+            onMomentumScrollEnd={(event) => {
+              const nextIndex = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              setViewerIndex(nextIndex);
+            }}
+            pagingEnabled
+            renderItem={({ item }) => <ZoomableImage uri={item} />}
+            showsHorizontalScrollIndicator={false}
+          />
+          <Text style={styles.viewerHint}>Pinch to zoom. Swipe left or right for more photos.</Text>
+        </View>
+      </Modal>
+
       <ScrollView
         bounces={false}
         overScrollMode="never"
@@ -372,13 +478,15 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
       >
         {/* ── Hero ── */}
         <View style={styles.heroWrap}>
-          {event.coverImageUrl ? (
-            <Image
-              contentFit="cover"
-              source={{ uri: event.coverImageUrl }}
-              style={styles.heroImage}
-              transition={200}
-            />
+          {eventGallery.length > 0 ? (
+            <Pressable onPress={() => openViewer(0)} style={styles.heroImagePressable}>
+              <Image
+                contentFit="cover"
+                source={{ uri: eventGallery[0] }}
+                style={styles.heroImage}
+                transition={200}
+              />
+            </Pressable>
           ) : (
             <LinearGradient
               colors={['#060D1F', '#0F2167', '#1E3A8A']}
@@ -427,6 +535,28 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
           ]}
         >
           <View style={styles.grabber} />
+
+          {eventGallery.length > 1 ? (
+            <View style={styles.gallerySection}>
+              <Text style={styles.sectionTitle}>Event Photos</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.galleryRow}
+              >
+                {eventGallery.map((imageUrl, index) => (
+                  <Pressable key={`${event.id}-image-${index}`} onPress={() => openViewer(index)} style={styles.galleryCard}>
+                    <Image
+                      contentFit="cover"
+                      source={{ uri: imageUrl }}
+                      style={styles.galleryImage}
+                      transition={150}
+                    />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
 
           {/* Status + category + title */}
           <View style={styles.titleBlock}>
@@ -726,7 +856,70 @@ const styles = StyleSheet.create({
   },
   backBtnStateText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#CBD5E1' },
 
+  viewerModal: {
+    flex: 1,
+    backgroundColor: 'rgba(2,6,23,0.96)',
+    justifyContent: 'center',
+  },
+  viewerTopBar: {
+    position: 'absolute',
+    top: 56,
+    left: 20,
+    right: 20,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  viewerCounter: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#E2E8F0' },
+  viewerCloseBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(15,23,42,0.66)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewerSlide: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  viewerImageWrap: {
+    width: SCREEN_WIDTH - 40,
+    height: SCREEN_HEIGHT * 0.7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewerImage: { width: '100%', height: '100%' },
+  viewerResetBtn: {
+    position: 'absolute',
+    bottom: 110,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(15,23,42,0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.28)',
+  },
+  viewerResetText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#E2E8F0' },
+  viewerHint: {
+    position: 'absolute',
+    bottom: 56,
+    alignSelf: 'center',
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: '#CBD5E1',
+  },
+
   heroWrap: { height: 340, position: 'relative' },
+  heroImagePressable: { width: '100%', height: '100%' },
   heroImage: { width: '100%', height: '100%' },
   heroPlaceholderIcon: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   overlayTop: {
@@ -751,6 +944,18 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     gap: 20,
   },
+  gallerySection: { gap: 10 },
+  galleryRow: { gap: 12, paddingRight: 4 },
+  galleryCard: {
+    width: 220,
+    height: 140,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  galleryImage: { width: '100%', height: '100%' },
   grabber: {
     width: 36, height: 4, borderRadius: 2,
     backgroundColor: '#E5E7EB', alignSelf: 'center', marginBottom: 2,

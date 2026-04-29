@@ -41,6 +41,14 @@ export type EventRecord = {
   updated_at: string;
 };
 
+export type EventImageRecord = {
+  id: string;
+  event_id: string;
+  image_url: string;
+  display_order: number;
+  created_at: string;
+};
+
 export type EventFavoriteRecord = {
   id: string;
   user_id: string;
@@ -188,6 +196,24 @@ export type Database = {
           id?: string;
           user_id?: string;
           event_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      event_images: {
+        Row: EventImageRecord;
+        Insert: {
+          id?: string;
+          event_id: string;
+          image_url: string;
+          display_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          image_url?: string;
+          display_order?: number;
           created_at?: string;
         };
         Relationships: [];

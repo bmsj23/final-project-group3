@@ -16,7 +16,7 @@ export function isRegistrationDeadlineBeforeEvent(deadline: string, eventDateTim
   return (
     Number.isFinite(deadlineDate.getTime()) &&
     Number.isFinite(eventDate.getTime()) &&
-    deadlineDate.getTime() <= eventDate.getTime()
+    deadlineDate.getTime() < eventDate.getTime()
   );
 }
 
@@ -57,7 +57,7 @@ export function validateEventForm(values: EventFormValues) {
   if (!isFutureIsoDate(values.registrationDeadline)) {
     errors.registrationDeadline = 'Registration deadline must be in the future.';
   } else if (!isRegistrationDeadlineBeforeEvent(values.registrationDeadline, values.dateTime)) {
-    errors.registrationDeadline = 'Registration deadline cannot be after the event date and time.';
+    errors.registrationDeadline = 'Registration deadline must be earlier than the event date and time.';
   }
 
   return errors;

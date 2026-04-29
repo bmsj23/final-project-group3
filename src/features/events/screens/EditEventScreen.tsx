@@ -6,7 +6,9 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Keyboard,
   KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -26,6 +28,7 @@ import {
   deleteEventImageFromPublicUrl,
   fetchCategories,
   fetchEventById,
+  replaceEventImages,
   updateOwnEvent,
   uploadEventImage,
 } from '../api';
@@ -47,7 +50,9 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
 
   const scrollRef = useRef<ScrollView | null>(null);
   const handleDescriptionFocus = useCallback(() => {
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
+    if (Platform.OS === 'ios') {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
+    }
   }, []);
 
   const initialValues = useMemo(
@@ -102,34 +107,45 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
   }, [navigation]);
 
   const handleSubmit = useCallback(
-    async ({ existingImageRemoved, originalCoverImageUrl, selectedImage, values }: EventFormSubmission) => {
+    async ({ existingImageUrls, selectedImages, values }: EventFormSubmission) => {
       if (!profile || !event) { setSubmissionError('Event is no longer available.'); return; }
       if (profile.id !== event.organizerId) { setSubmissionError('Only the event owner can update this.'); return; }
       setIsSubmitting(true);
       setSubmissionError(null);
-      let uploadedImagePath: string | null = null;
-      let nextCoverImageUrl = values.coverImageUrl ?? null;
+      const uploadedImages: Array<{ path: string; publicUrl: string }> = [];
 
       try {
-        if (selectedImage) {
-          if (!existingImageRemoved && originalCoverImageUrl) {
-            nextCoverImageUrl = originalCoverImageUrl;
-          } else {
-            const { data, error } = await uploadEventImage(profile.id, selectedImage);
-            if (error || !data) throw error ?? new Error('Cover image upload failed.');
-            uploadedImagePath = data.path;
-            nextCoverImageUrl = data.publicUrl;
+        if (selectedImages.length > 0) {
+          for (const image of selectedImages) {
+            const { data, error } = await uploadEventImage(profile.id, image);
+            if (error || !data) throw error ?? new Error('Image upload failed.');
+            uploadedImages.push(data);
           }
         }
 
+        const uploadedImageUrls = uploadedImages.map((image) => image.publicUrl);
+        const finalImageUrls = [...existingImageUrls, ...uploadedImageUrls];
+        const removedImageUrls = event.imageUrls.filter((imageUrl) => !existingImageUrls.includes(imageUrl));
+        const nextCoverImageUrl = finalImageUrls[0] ?? null;
+
         const { error } = await updateOwnEvent(event.id, { ...values, coverImageUrl: nextCoverImageUrl });
         if (error) {
-          if (uploadedImagePath) await deleteEventImage(uploadedImagePath);
+          for (const image of uploadedImages) {
+            await deleteEventImage(image.path);
+          }
           throw error;
         }
 
-        if (existingImageRemoved && originalCoverImageUrl && uploadedImagePath) {
-          await deleteEventImageFromPublicUrl(originalCoverImageUrl);
+        const { error: replaceImagesError } = await replaceEventImages(event.id, finalImageUrls);
+        if (replaceImagesError) {
+          for (const image of uploadedImages) {
+            await deleteEventImage(image.path);
+          }
+          throw replaceImagesError;
+        }
+
+        for (const removedImageUrl of removedImageUrls) {
+          await deleteEventImageFromPublicUrl(removedImageUrl);
         }
 
         isDirtyRef.current = false;
@@ -258,7 +274,7 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
       <View style={styles.orbBlue}   pointerEvents="none" />
 
       <KeyboardAvoidingView
-        behavior="padding"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
         style={{ flex: 1, backgroundColor: '#060D1F' }}
       >
@@ -268,7 +284,8 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
           bounces={false} overScrollMode="never"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          onScrollBeginDrag={() => Keyboard.dismiss()}
           contentContainerStyle={styles.scroll}
         >
           {/* ── Hero ── */}
