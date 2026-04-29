@@ -13,9 +13,10 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAppSession } from '../../../providers/AppSessionProvider';
+import { DarkHero } from '../../../components/ui/DarkHero';
+import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { SectionHeader } from '../../../components/ui/SectionHeader';
 import { colors } from '../../../theme/colors';
 import { layout } from '../../../theme/layout';
@@ -208,7 +209,7 @@ export function SavedEventsScreen({ navigation }: SavedEventsScreenProps) {
 
   if (isGuest) {
     return (
-      <SafeAreaView style={styles.root} edges={['top']}>
+      <ScreenContainer bg={colors.bgDark} noPadding>
         <StatusBar style="dark" />
 
         <View style={styles.guestContainer}>
@@ -229,13 +230,13 @@ export function SavedEventsScreen({ navigation }: SavedEventsScreenProps) {
             </View>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </ScreenContainer>
     );
   }
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
-      <StatusBar style="dark" />
+    <ScreenContainer bg={colors.bgDark} noPadding>
+      <StatusBar style="light" />
 
       <ScrollView
         bounces={false}
@@ -250,21 +251,18 @@ export function SavedEventsScreen({ navigation }: SavedEventsScreenProps) {
         }
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.hero}>
-          <View style={styles.heroTop}>
-            <View>
-              <Text style={styles.heroEyebrow}>Personal Collection</Text>
-              <Text style={styles.heroTitle}>Saved Events</Text>
-            </View>
+        <DarkHero
+          eyebrow="Personal Collection"
+          title="Saved Events"
+          rightSlot={
             <View style={styles.heroChip}>
               <Text style={styles.heroChipCount}>{savedEvents.length}</Text>
               <Text style={styles.heroChipLabel}>saved</Text>
             </View>
-          </View>
-        </View>
+          }
+        />
 
         <View style={styles.bodySheet}>
-          <View style={styles.bodyHandle} />
           <View style={styles.bodyHeader}>
             <SectionHeader title="Favorites" />
           </View>
@@ -309,12 +307,12 @@ export function SavedEventsScreen({ navigation }: SavedEventsScreenProps) {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#EEF4FF' },
+  root: { flex: 1, backgroundColor: colors.bgDark },
   scroll: { flexGrow: 1 },
 
   guestContainer: {
@@ -337,13 +335,13 @@ const styles = StyleSheet.create({
   guestTitle: {
     fontFamily: 'Inter_700Bold',
     fontSize: 28,
-    color: '#0F172A',
+    color: '#FFFFFF',
   },
   guestSub: {
     fontFamily: 'Inter_400Regular',
     fontSize: 15,
     lineHeight: 22,
-    color: '#64748B',
+    color: '#CBD5E1',
     textAlign: 'center',
   },
   guestBtn: { borderRadius: radius.full, overflow: 'hidden' },
@@ -358,26 +356,6 @@ const styles = StyleSheet.create({
   },
   guestBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: '#fff' },
 
-  hero: {
-    marginTop: spacing.lg,
-    marginHorizontal: layout.screenPaddingH,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    backgroundColor: colors.primaryDark,
-    borderRadius: radius.xl,
-  },
-  heroTop: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  heroEyebrow: {
-    fontFamily: 'Inter_500Medium', fontSize: 12,
-    color: '#C7DAF8', letterSpacing: 0.5, marginBottom: 4,
-  },
-  heroTitle: {
-    fontFamily: 'Inter_700Bold', fontSize: 30,
-    color: '#FFFFFF', letterSpacing: -0.6,
-  },
   heroChip: {
     backgroundColor: 'rgba(255,255,255,0.14)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)',
@@ -392,17 +370,13 @@ const styles = StyleSheet.create({
 
   bodySheet: {
     flex: 1,
-    marginTop: spacing.lg,
-    backgroundColor: '#F8FBFF',
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    paddingTop: 16, paddingBottom: 100,
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    marginTop: -12,
     minHeight: 500,
-    borderTopWidth: 1,
-    borderTopColor: '#DDE7F6',
-  },
-  bodyHandle: {
-    width: 40, height: 5, borderRadius: 3,
-    backgroundColor: '#CBD5E1', alignSelf: 'center', marginBottom: 20,
+    paddingTop: spacing.xl,
+    paddingBottom: 100,
   },
   bodyHeader: {
     paddingHorizontal: layout.screenPaddingH,

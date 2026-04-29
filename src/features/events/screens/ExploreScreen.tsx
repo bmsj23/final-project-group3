@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   screen: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.bgDark,
     flex: 1,
   },
   scroll: {
@@ -213,7 +213,11 @@ const styles = StyleSheet.create({
   },
   body: {
     backgroundColor: colors.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    flex: 1,
     gap: spacing.lg,
+    marginTop: -12,
     paddingBottom: spacing.xxl,
     paddingHorizontal: layout.screenPaddingH,
     paddingTop: spacing.xl,

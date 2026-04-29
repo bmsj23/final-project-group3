@@ -2,6 +2,7 @@ import { supabase, supabaseConfig } from '../../lib/supabase/client';
 import type {
   CategoryRecord,
   EventFavoriteRecord,
+  EventImageRecord,
   EventRecord,
   EventRemainingSlotsRow,
   ProfileRecord,
@@ -26,6 +27,13 @@ import type {
 type EventRecordWithCategory = EventRecord & {
   categories: Pick<CategoryRecord, 'name'> | Array<Pick<CategoryRecord, 'name'>> | null;
   organizer: Pick<ProfileRecord, 'full_name' | 'avatar_url'> | Array<Pick<ProfileRecord, 'full_name' | 'avatar_url'>> | null;
+  event_images?: EventImageRecord[] | null;
+};
+
+type SupabaseErrorLike = {
+  code?: string;
+  constraint?: string;
+  message?: string;
 };
 
 function requireSupabase() {
@@ -76,18 +84,29 @@ function mapEvent(record: EventRecord, remainingSlots?: number): EventSummary {
     status: record.status,
     categoryId: record.category_id,
     coverImageUrl: record.cover_image_url,
+    imageUrls: record.cover_image_url ? [record.cover_image_url] : [],
   };
 }
 
 function mapEventDetail(record: EventRecordWithCategory, remainingSlots?: number): EventDetail {
   const category = Array.isArray(record.categories) ? record.categories[0] : record.categories;
   const organizer = Array.isArray(record.organizer) ? record.organizer[0] : record.organizer;
+  const galleryImageUrls = (record.event_images ?? [])
+    .slice()
+    .sort((left, right) => left.display_order - right.display_order)
+    .map((image) => image.image_url);
+  const coverImageUrl = record.cover_image_url ?? galleryImageUrls[0] ?? null;
+  const imageUrls = [
+    ...(coverImageUrl ? [coverImageUrl] : []),
+    ...galleryImageUrls,
+  ].filter((imageUrl, index, all) => Boolean(imageUrl) && all.indexOf(imageUrl) === index);
 
   return {
-    ...mapEvent(record, remainingSlots),
+    ...mapEvent({ ...record, cover_image_url: coverImageUrl }, remainingSlots),
     description: record.description,
     registrationDeadline: record.registration_deadline,
     tags: record.tags,
+    imageUrls,
     categoryName: category?.name ?? null,
     organizerName: organizer?.full_name ?? null,
     organizerAvatarUrl: organizer?.avatar_url ?? null,
@@ -143,6 +162,20 @@ function getPublicImagePath(publicUrl: string | null) {
   }
 
   return decodeURIComponent(normalizedUrl.slice(prefix.length));
+}
+
+function mapEventMutationError(error: unknown) {
+  const eventError = error as SupabaseErrorLike | null;
+
+  if (eventError?.constraint === 'events_deadline_before_event') {
+    return new Error('Registration deadline must be earlier than the event date and time.');
+  }
+
+  if (eventError?.code === '23514' && eventError.message?.toLowerCase().includes('registration_deadline')) {
+    return new Error('Registration deadline must be earlier than the event date and time.');
+  }
+
+  return error;
 }
 
 export async function fetchCategories() {
@@ -289,6 +322,13 @@ export async function fetchEventById(eventId: string) {
         cover_image_url,
         tags,
         registration_deadline,
+        event_images (
+          id,
+          event_id,
+          image_url,
+          display_order,
+          created_at
+        ),
         status,
         is_flagged,
         created_at,
@@ -330,7 +370,7 @@ export async function createEvent(organizerId: string, values: EventFormValues) 
 
   return {
     data,
-    error,
+    error: mapEventMutationError(error),
   };
 }
 
@@ -347,8 +387,43 @@ export async function updateOwnEvent(eventId: string, values: EventFormValues) {
 
   return {
     data,
-    error,
+    error: mapEventMutationError(error),
   };
+}
+
+export async function saveEventImages(eventId: string, imageUrls: string[], startOrder = 0) {
+  const client = requireSupabase();
+
+  const { error } = await client
+    .from('event_images')
+    .insert(
+      imageUrls.map((imageUrl, index) => ({
+        event_id: eventId,
+        image_url: imageUrl,
+        display_order: startOrder + index,
+      })),
+    );
+
+  return { error };
+}
+
+export async function replaceEventImages(eventId: string, imageUrls: string[]) {
+  const client = requireSupabase();
+
+  const { error: deleteError } = await client
+    .from('event_images')
+    .delete()
+    .eq('event_id', eventId);
+
+  if (deleteError) {
+    return { error: deleteError };
+  }
+
+  if (imageUrls.length === 0) {
+    return { error: null };
+  }
+
+  return saveEventImages(eventId, imageUrls, 0);
 }
 
 export async function updateEventStatus(eventId: string, status: EventStatus) {

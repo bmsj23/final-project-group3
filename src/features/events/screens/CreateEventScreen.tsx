@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -23,7 +23,7 @@ import { radius } from '../../../theme/radius';
 import { spacing } from '../../../theme/spacing';
 import { layout } from '../../../theme/layout';
 import { notifyEventCreated } from '../../notifications/service';
-import { createEvent, deleteEventImage, fetchCategories, uploadEventImage } from '../api';
+import { createEvent, deleteEventImage, deleteOwnEvent, fetchCategories, saveEventImages, updateOwnEvent, uploadEventImage } from '../api';
 import { EventForm, type EventFormSubmission } from '../components/EventForm';
 import { createEmptyEventFormValues } from '../form';
 import type { EventCategorySummary } from '../types';
@@ -50,7 +50,9 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
   const isDirtyRef = useRef(false);
   const scrollRef = useRef<ScrollView | null>(null);
   const handleDescriptionFocus = useCallback(() => {
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
+    if (Platform.OS === 'ios') {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
+    }
   }, []);
 
   const heroAnim = useRef(new Animated.Value(0)).current;
@@ -97,24 +99,46 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
   }, [navigation]);
 
   const handleSubmit = useCallback(
-    async ({ selectedImage, values }: EventFormSubmission) => {
+    async ({ selectedImages, values }: EventFormSubmission) => {
       if (!profile) { setSubmissionError('Account setup required.'); return; }
       setIsSubmitting(true);
       setSubmissionError(null);
-      let uploadedImagePath: string | null = null;
-      let coverImageUrl = values.coverImageUrl ?? null;
+      let createdEventId: string | null = null;
+      let shouldRollback = true;
+      const uploadedImages: Array<{ path: string; publicUrl: string }> = [];
       try {
-        if (selectedImage) {
-          const { data, error } = await uploadEventImage(profile.id, selectedImage);
-          if (error || !data) throw error ?? new Error('Cover image upload failed.');
-          uploadedImagePath = data.path;
-          coverImageUrl = data.publicUrl;
-        }
-        const { data, error } = await createEvent(profile.id, { ...values, coverImageUrl });
+        const { data, error } = await createEvent(profile.id, { ...values, coverImageUrl: null });
         if (error || !data) {
-          if (uploadedImagePath) await deleteEventImage(uploadedImagePath);
           throw error ?? new Error('Unable to create event.');
         }
+        createdEventId = data.id;
+
+        if (selectedImages.length > 0) {
+          for (const image of selectedImages) {
+            const { data: uploadData, error: uploadError } = await uploadEventImage(profile.id, image);
+            if (uploadError || !uploadData) {
+              throw uploadError ?? new Error('Image upload failed.');
+            }
+
+            uploadedImages.push(uploadData);
+          }
+
+          const imageUrls = uploadedImages.map((image) => image.publicUrl);
+          const { error: imageSaveError } = await saveEventImages(data.id, imageUrls);
+          if (imageSaveError) {
+            throw imageSaveError;
+          }
+
+          const { error: coverUpdateError } = await updateOwnEvent(data.id, {
+            ...values,
+            coverImageUrl: imageUrls[0] ?? null,
+          });
+          if (coverUpdateError) {
+            throw coverUpdateError;
+          }
+        }
+
+        shouldRollback = false;
         await notifyEventCreated(values.title.trim());
         navigation.reset({
           index: 1,
@@ -124,6 +148,16 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
           ],
         });
       } catch (err) {
+        if (shouldRollback) {
+          for (const image of uploadedImages) {
+            await deleteEventImage(image.path);
+          }
+
+          if (createdEventId) {
+            await deleteOwnEvent(createdEventId);
+          }
+        }
+
         setSubmissionError(err instanceof Error ? err.message : 'Unable to create event.');
       } finally {
         setIsSubmitting(false);
@@ -195,20 +229,17 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
       <View style={styles.orbBlue}   pointerEvents="none" />
       <View style={styles.orbPurple} pointerEvents="none" />
 
-      <KeyboardAvoidingView
-        behavior="padding"
-        keyboardVerticalOffset={0}
-        style={{ flex: 1, backgroundColor: '#060D1F' }}
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scrollView}
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        bounces={false} overScrollMode="never"
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        onScrollBeginDrag={() => Keyboard.dismiss()}
+        contentContainerStyle={styles.scroll}
       >
-        <ScrollView
-          ref={scrollRef}
-          style={styles.scrollView}
-          bounces={false} overScrollMode="never"
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          contentContainerStyle={styles.scroll}
-        >
           {/* ── Hero ── */}
           <Animated.View
             style={[
@@ -252,8 +283,7 @@ export function CreateEventScreen({ navigation }: CreateEventScreenProps) {
               submitLabel={isSubmitting ? 'Creating Event…' : 'Publish Event'}
             />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </SafeAreaView>
   );
 }

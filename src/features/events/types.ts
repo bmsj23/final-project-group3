@@ -10,6 +10,7 @@ export type EventFormValues = {
   category: string;
   tags: string[];
   coverImageUrl?: string | null;
+  imageUrls?: string[];
 };
 
 export type EventFormErrors = Partial<Record<keyof EventFormValues, string>>;
@@ -25,6 +26,7 @@ export type EventSummary = {
   status: EventStatus;
   categoryId: string;
   coverImageUrl: string | null;
+  imageUrls: string[];
 };
 
 export type EventDetail = EventSummary & {
@@ -56,4 +58,10 @@ export type EventImageAsset = {
 export type EventImageUploadResult = {
   path: string;
   publicUrl: string;
+};
+
+export type EventImageSummary = {
+  id: string;
+  imageUrl: string;
+  displayOrder: number;
 };

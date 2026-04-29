@@ -299,15 +299,6 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
                     icon="calendar-outline"
                     title="No events yet"
                   />
-                  <Pressable
-                    style={({ pressed }) => [styles.emptyCreateBtn, pressed && { opacity: 0.85 }]}
-                    onPress={() => navigation.navigate('CreateEvent')}
-                  >
-                    <View style={styles.emptyCreateSurface}>
-                      <Ionicons name="add-circle-outline" size={18} color="#fff" />
-                      <Text style={styles.emptyCreateText}>Create Your First Event</Text>
-                    </View>
-                  </Pressable>
                 </View>
               ) : (
                 <View style={styles.list}>
@@ -327,23 +318,7 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
       </KeyboardAvoidingView>
 
       {!isLoading && (
-        <Animated.View
-          style={[
-            styles.fab,
-            { transform: [{ scale: fabAnim }], opacity: fabAnim },
-          ]}
-        >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Create new event"
-            style={({ pressed }) => [styles.fabBtn, pressed && { opacity: 0.85 }]}
-            onPress={() => navigation.navigate('CreateEvent')}
-          >
-            <View style={styles.fabSurface}>
-              <Ionicons name="add" size={26} color="#fff" />
-            </View>
-          </Pressable>
-        </Animated.View>
+        null
       )}
     </ScreenContainer>
   );
@@ -382,8 +357,12 @@ const styles = StyleSheet.create({
 
   // Body
   body: {
+    flex: 1,
     backgroundColor: colors.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     gap: spacing.xl,
+    marginTop: -12,
     paddingBottom: spacing.xxl,
     paddingHorizontal: layout.screenPaddingH,
     paddingTop: spacing.xl,
@@ -447,14 +426,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   retryText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: colors.primary },
-  emptyCreateBtn: { borderRadius: radius.md, overflow: 'hidden', marginTop: spacing.lg, width: '100%' },
-  emptyCreateSurface: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    minHeight: 52, gap: spacing.xs,
-    backgroundColor: colors.primaryDark,
-  },
-  emptyCreateText: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#fff' },
-
   // Guest
   guestContainer: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
@@ -476,19 +447,4 @@ const styles = StyleSheet.create({
   },
   guestBtnText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#fff' },
 
-  // FAB
-  fab: {
-    position: 'absolute', bottom: 28, right: 24,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  fabBtn: { borderRadius: 32 },
-  fabSurface: {
-    width: 58, height: 58, borderRadius: 29,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.primaryDark,
-  },
 });

@@ -39,7 +39,7 @@ export function DarkHero({
       colors={[colors.gradient.blackLinear.start, colors.gradient.blackLinear.end]}
       end={{ x: 1, y: 1 }}
       start={{ x: 0, y: 0 }}
-      style={[styles.hero, { paddingTop: insets.top + spacing.xl }]}
+      style={[styles.hero, { paddingTop: insets.top + spacing.md }]}
     >
       <View style={styles.topRow}>
         {showAvatar ? (
@@ -75,8 +75,6 @@ export function DarkHero({
 
 const styles = StyleSheet.create({
   hero: {
-    borderBottomLeftRadius: 36,
-    borderBottomRightRadius: 36,
     overflow: 'hidden',
     paddingHorizontal: layout.screenPaddingH,
     paddingBottom: spacing.xl,

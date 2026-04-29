@@ -11,6 +11,7 @@ export function createEmptyEventFormValues(): EventFormValues {
     category: '',
     tags: [],
     coverImageUrl: null,
+    imageUrls: [],
   };
 }
 
@@ -25,5 +26,6 @@ export function mapEventDetailToFormValues(event: EventDetail): EventFormValues 
     category: event.categoryId,
     tags: event.tags,
     coverImageUrl: event.coverImageUrl,
+    imageUrls: event.imageUrls,
   };
 }
