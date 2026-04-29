@@ -1,10 +1,12 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 import { AccessNotice } from '../../../components/ui/AccessNotice';
+import { DarkHero } from '../../../components/ui/DarkHero';
 import { EmptyStateCard } from '../../../components/ui/EmptyStateCard';
 import { ScreenContainer } from '../../../components/ui/ScreenContainer';
 import { SectionHeader } from '../../../components/ui/SectionHeader';
@@ -13,6 +15,7 @@ import type { EventRecord } from '../../../lib/supabase/types';
 import type { AppStackParamList } from '../../../navigation/types';
 import { useAppSession } from '../../../providers/AppSessionProvider';
 import { colors } from '../../../theme/colors';
+import { layout } from '../../../theme/layout';
 import { radius } from '../../../theme/radius';
 import { spacing } from '../../../theme/spacing';
 import { typography } from '../../../theme/typography';
@@ -199,222 +202,332 @@ export function AdminUsersScreen({ navigation }: AdminUsersScreenProps) {
     );
   }, [loadAdminData]);
 
+  const handleBackPress = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('Tabs', { screen: 'Profile' });
+  }, [navigation]);
+
   return (
-    <ScreenContainer scroll>
-      <StatusBar style="dark" />
-      <SectionHeader title="Admin Panel" />
-
-      {!isAdmin ? (
-        <View style={styles.restrictedWrap}>
-          <AccessNotice
-            body="Only administrators can access this screen."
-            title="Admin access required"
+    <ScreenContainer bg={colors.bgDark} noPadding>
+      <StatusBar style="light" />
+      <ScrollView
+        bounces={false}
+        contentContainerStyle={styles.content}
+        overScrollMode="never"
+        refreshControl={isAdmin ? (
+          <RefreshControl
+            onRefresh={() => void loadAdminData(true)}
+            refreshing={isRefreshing}
+            tintColor={colors.primary}
           />
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => navigation.goBack()}
-            style={({ pressed }) => [styles.backButton, pressed && styles.buttonPressed]}
-          >
-            <Text style={styles.backButtonText}>Go Back</Text>
-          </Pressable>
-        </View>
-      ) : errorMessage ? (
-        <EmptyStateCard body={errorMessage} icon="cloud-offline-outline" title="Unable to load admin data" />
-      ) : isLoading ? (
-        <EmptyStateCard body="Loading users and moderation queue." icon="hourglass-outline" title="Loading admin panel" />
-      ) : (
-        <ScrollView
-          bounces={false}
-          contentContainerStyle={styles.content}
-          overScrollMode="never"
-          refreshControl={
-            <RefreshControl
-              onRefresh={() => void loadAdminData(true)}
-              refreshing={isRefreshing}
-              tintColor={colors.primary}
-            />
-          }
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.section}>
-            <SectionHeader title="User Management" />
-            <View style={styles.filterSection}>
-              <TextInput
-                autoCapitalize="none"
-                autoCorrect={false}
-                onChangeText={setSearchQuery}
-                placeholder="Search by name or email"
-                placeholderTextColor={colors.textMuted}
-                style={styles.searchInput}
-                value={searchQuery}
-              />
-              <View style={styles.filterRow}>
-                {[
-                  { key: 'all' as const, label: 'All' },
-                  { key: 'admin' as const, label: 'Admins' },
-                  { key: 'user' as const, label: 'Users' },
-                  { key: 'suspended' as const, label: 'Suspended' },
-                ].map((filter) => (
-                  <Pressable
-                    key={filter.key}
-                    accessibilityRole="button"
-                    onPress={() => setUserFilter(filter.key)}
-                    style={({ pressed }) => [
-                      styles.filterPill,
-                      userFilter === filter.key && styles.filterPillActive,
-                      pressed && styles.buttonPressed,
-                    ]}
-                  >
-                    <Text style={[styles.filterPillText, userFilter === filter.key && styles.filterPillTextActive]}>
-                      {filter.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+        ) : undefined}
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
+      >
+        <DarkHero
+          eyebrow="Administration"
+          title="Admin Panel"
+          bottomSlot={(
+            <View style={styles.heroBottom}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleBackPress}
+                style={({ pressed }) => [styles.heroBackButton, pressed && styles.buttonPressed]}
+              >
+                <Ionicons color={colors.textLight} name="chevron-back" size={18} />
+                <Text style={styles.heroBackText}>Back</Text>
+              </Pressable>
+              {isAdmin ? (
+                <View style={styles.heroStats}>
+                  <View style={styles.heroStatCard}>
+                    <Text style={styles.heroStatValue}>{users.length}</Text>
+                    <Text style={styles.heroStatLabel}>Users</Text>
+                  </View>
+                  <View style={styles.heroStatCard}>
+                    <Text style={styles.heroStatValue}>{events.length}</Text>
+                    <Text style={styles.heroStatLabel}>Events</Text>
+                  </View>
+                </View>
+              ) : null}
             </View>
-            {filteredUsers.length === 0 ? (
-              <EmptyStateCard body="No users were found." icon="people-outline" title="No users" />
-            ) : (
-              <View style={styles.cardList}>
-                {filteredUsers.map((user) => {
-                  const isSelf = user.id === profile?.id;
-                  return (
-                    <View key={user.id} style={styles.userCard}>
-                      <View style={styles.userHeader}>
-                        <Text numberOfLines={1} style={styles.userName}>{user.fullName ?? 'Unnamed user'}</Text>
-                        <View style={[styles.roleBadge, user.role === 'admin' ? styles.roleAdmin : styles.roleUser]}>
-                          <Text style={styles.roleBadgeText}>{user.role.toUpperCase()}</Text>
-                        </View>
-                      </View>
-                      <Text numberOfLines={1} style={styles.userEmail}>{user.email}</Text>
-                      <Text style={styles.userMeta}>
-                        Joined {new Date(user.createdAt).toLocaleDateString('en-PH')}
-                      </Text>
-                      <View style={styles.actionRow}>
-                        <Pressable
-                          accessibilityRole="button"
-                          disabled={isSelf}
-                          onPress={() => void handleRoleToggle(user)}
-                          style={({ pressed }) => [
-                            styles.actionButton,
-                            isSelf && styles.disabledButton,
-                            pressed && !isSelf && styles.buttonPressed,
-                          ]}
-                        >
-                          <Text style={styles.actionButtonText}>{user.role === 'admin' ? 'Demote' : 'Promote'}</Text>
-                        </Pressable>
-                        <Pressable
-                          accessibilityRole="button"
-                          disabled={isSelf}
-                          onPress={() => void handleSuspensionToggle(user)}
-                          style={({ pressed }) => [
-                            styles.actionButton,
-                            isSelf && styles.disabledButton,
-                            pressed && !isSelf && styles.buttonPressed,
-                          ]}
-                        >
-                          <Text style={styles.actionButtonText}>{user.isSuspended ? 'Activate' : 'Suspend'}</Text>
-                        </Pressable>
-                        <Pressable
-                          accessibilityRole="button"
-                          disabled={isSelf}
-                          onPress={() => handleDeleteUser(user)}
-                          style={({ pressed }) => [
-                            styles.dangerButton,
-                            isSelf && styles.disabledButton,
-                            pressed && !isSelf && styles.buttonPressed,
-                          ]}
-                        >
-                          <Text style={styles.dangerButtonText}>Delete</Text>
-                        </Pressable>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-          </View>
+          )}
+        />
 
-          <View style={styles.section}>
-            <SectionHeader title="Event Moderation" />
-            {events.length === 0 ? (
-              <EmptyStateCard body="No events are in the moderation queue." icon="flag-outline" title="Queue is clear" />
-            ) : (
-              <View style={styles.cardList}>
-                {events.map((event) => (
-                  <View key={event.id} style={styles.eventCard}>
-                    <Text numberOfLines={2} style={styles.eventTitle}>{event.title}</Text>
-                    <Text style={styles.eventMeta}>{formatEventDateTime(event.startsAt)}</Text>
-                    <Text style={styles.eventMeta}>Status: {formatEventStatus(event.status)}</Text>
-                    <View style={styles.actionRow}>
+        <View style={styles.body}>
+          {!isAdmin ? (
+            <View style={styles.restrictedWrap}>
+              <AccessNotice
+                body="Only administrators can access this screen."
+                title="Admin access required"
+              />
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleBackPress}
+                style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
+              >
+                <Text style={styles.primaryButtonText}>Go Back</Text>
+              </Pressable>
+            </View>
+          ) : errorMessage ? (
+            <View style={styles.stateWrap}>
+              <EmptyStateCard body={errorMessage} icon="cloud-offline-outline" title="Unable to load admin data" />
+            </View>
+          ) : isLoading ? (
+            <View style={styles.stateWrap}>
+              <EmptyStateCard body="Loading users and moderation queue." icon="hourglass-outline" title="Loading admin panel" />
+            </View>
+          ) : (
+            <>
+              <View style={styles.sectionSurface}>
+                <SectionHeader title="User Management" />
+                <View style={styles.filterSection}>
+                  <TextInput
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    onChangeText={setSearchQuery}
+                    placeholder="Search by name or email"
+                    placeholderTextColor={colors.textMuted}
+                    style={styles.searchInput}
+                    value={searchQuery}
+                  />
+                  <View style={styles.filterRow}>
+                    {[
+                      { key: 'all' as const, label: 'All' },
+                      { key: 'admin' as const, label: 'Admins' },
+                      { key: 'user' as const, label: 'Users' },
+                      { key: 'suspended' as const, label: 'Suspended' },
+                    ].map((filter) => (
                       <Pressable
+                        key={filter.key}
                         accessibilityRole="button"
-                        disabled={event.status === 'cancelled'}
-                        onPress={() => void handleCancelEvent(event.id)}
+                        onPress={() => setUserFilter(filter.key)}
                         style={({ pressed }) => [
-                          styles.actionButton,
-                          event.status === 'cancelled' && styles.disabledButton,
-                          pressed && event.status !== 'cancelled' && styles.buttonPressed,
+                          styles.filterPill,
+                          userFilter === filter.key && styles.filterPillActive,
+                          pressed && styles.buttonPressed,
                         ]}
                       >
-                        <Text style={styles.actionButtonText}>Cancel Event</Text>
+                        <Text style={[styles.filterPillText, userFilter === filter.key && styles.filterPillTextActive]}>
+                          {filter.label}
+                        </Text>
                       </Pressable>
-                      <Pressable
-                        accessibilityRole="button"
-                        onPress={() => handleDeleteEvent(event.id)}
-                        style={({ pressed }) => [styles.dangerButton, pressed && styles.buttonPressed]}
-                      >
-                        <Text style={styles.dangerButtonText}>Delete Event</Text>
-                      </Pressable>
-                    </View>
+                    ))}
                   </View>
-                ))}
+                </View>
+                {filteredUsers.length === 0 ? (
+                  <EmptyStateCard body="No users were found." icon="people-outline" title="No users" />
+                ) : (
+                  <View style={styles.cardList}>
+                    {filteredUsers.map((user) => {
+                      const isSelf = user.id === profile?.id;
+                      return (
+                        <View key={user.id} style={styles.userCard}>
+                          <View style={styles.userHeader}>
+                            <Text numberOfLines={1} style={styles.userName}>{user.fullName ?? 'Unnamed user'}</Text>
+                            <View style={[styles.roleBadge, user.role === 'admin' ? styles.roleAdmin : styles.roleUser]}>
+                              <Text style={styles.roleBadgeText}>{user.role.toUpperCase()}</Text>
+                            </View>
+                          </View>
+                          <Text numberOfLines={1} style={styles.userEmail}>{user.email}</Text>
+                          <Text style={styles.userMeta}>
+                            Joined {new Date(user.createdAt).toLocaleDateString('en-PH')}
+                          </Text>
+                          <View style={styles.actionRow}>
+                            <Pressable
+                              accessibilityRole="button"
+                              disabled={isSelf}
+                              onPress={() => void handleRoleToggle(user)}
+                              style={({ pressed }) => [
+                                styles.actionButton,
+                                isSelf && styles.disabledButton,
+                                pressed && !isSelf && styles.buttonPressed,
+                              ]}
+                            >
+                              <Text style={styles.actionButtonText}>{user.role === 'admin' ? 'Demote' : 'Promote'}</Text>
+                            </Pressable>
+                            <Pressable
+                              accessibilityRole="button"
+                              disabled={isSelf}
+                              onPress={() => void handleSuspensionToggle(user)}
+                              style={({ pressed }) => [
+                                styles.actionButton,
+                                isSelf && styles.disabledButton,
+                                pressed && !isSelf && styles.buttonPressed,
+                              ]}
+                            >
+                              <Text style={styles.actionButtonText}>{user.isSuspended ? 'Activate' : 'Suspend'}</Text>
+                            </Pressable>
+                            <Pressable
+                              accessibilityRole="button"
+                              disabled={isSelf}
+                              onPress={() => handleDeleteUser(user)}
+                              style={({ pressed }) => [
+                                styles.dangerButton,
+                                isSelf && styles.disabledButton,
+                                pressed && !isSelf && styles.buttonPressed,
+                              ]}
+                            >
+                              <Text style={styles.dangerButtonText}>Delete</Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
               </View>
-            )}
-          </View>
-        </ScrollView>
-      )}
+
+              <View style={styles.sectionSurface}>
+                <SectionHeader title="Event Moderation" />
+                {events.length === 0 ? (
+                  <EmptyStateCard body="No events are in the moderation queue." icon="flag-outline" title="Queue is clear" />
+                ) : (
+                  <View style={styles.cardList}>
+                    {events.map((event) => (
+                      <View key={event.id} style={styles.eventCard}>
+                        <Text numberOfLines={2} style={styles.eventTitle}>{event.title}</Text>
+                        <Text style={styles.eventMeta}>{formatEventDateTime(event.startsAt)}</Text>
+                        <Text style={styles.eventMeta}>Status: {formatEventStatus(event.status)}</Text>
+                        <View style={styles.actionRow}>
+                          <Pressable
+                            accessibilityRole="button"
+                            disabled={event.status === 'cancelled'}
+                            onPress={() => void handleCancelEvent(event.id)}
+                            style={({ pressed }) => [
+                              styles.actionButton,
+                              event.status === 'cancelled' && styles.disabledButton,
+                              pressed && event.status !== 'cancelled' && styles.buttonPressed,
+                            ]}
+                          >
+                            <Text style={styles.actionButtonText}>Cancel Event</Text>
+                          </Pressable>
+                          <Pressable
+                            accessibilityRole="button"
+                            onPress={() => handleDeleteEvent(event.id)}
+                            style={({ pressed }) => [styles.dangerButton, pressed && styles.buttonPressed]}
+                          >
+                            <Text style={styles.dangerButtonText}>Delete Event</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </>
+          )}
+        </View>
+      </ScrollView>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: {
+    backgroundColor: 'transparent',
+    flex: 1,
+  },
+  content: {
+    flexGrow: 1,
+  },
+  heroBottom: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'space-between',
+  },
+  heroBackButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.24)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.xxs,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+  },
+  heroBackText: {
+    ...typography.caption3,
+    color: colors.textLight,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  heroStatCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.24)',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    minWidth: 72,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  heroStatValue: {
+    ...typography.button1,
+    color: colors.textLight,
+  },
+  heroStatLabel: {
+    ...typography.caption4,
+    color: '#CBD5E1',
+    textTransform: 'uppercase',
+  },
+  body: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    flex: 1,
+    gap: spacing.lg,
+    marginTop: -12,
+    minHeight: 540,
+    paddingBottom: spacing.xxl,
+    paddingHorizontal: layout.screenPaddingH,
+    paddingTop: spacing.xl,
+  },
   restrictedWrap: {
     gap: spacing.md,
-    marginTop: spacing.md,
   },
-  backButton: {
+  primaryButton: {
     alignItems: 'center',
     backgroundColor: colors.primary,
     borderRadius: radius.full,
     justifyContent: 'center',
     minHeight: 46,
   },
-  backButtonText: {
+  primaryButtonText: {
     ...typography.button1,
     color: colors.textLight,
   },
   buttonPressed: {
     opacity: 0.85,
   },
-  content: {
-    gap: spacing.xl,
-    paddingBottom: spacing.xxl,
+  stateWrap: {
+    paddingTop: spacing.xs,
   },
-  section: {
+  sectionSurface: {
+    backgroundColor: '#F8FAFF',
+    borderColor: '#DBEAFE',
+    borderRadius: radius.xl,
+    borderWidth: 1,
     gap: spacing.md,
+    padding: spacing.md,
   },
   filterSection: {
     gap: spacing.sm,
   },
   searchInput: {
     ...typography.body2,
-    backgroundColor: colors.bgCard,
-    borderColor: colors.border,
+    backgroundColor: colors.white,
+    borderColor: '#BFDBFE',
     borderRadius: radius.md,
     borderWidth: 1,
     color: colors.text,
-    minHeight: 44,
+    minHeight: 46,
     paddingHorizontal: spacing.md,
   },
   filterRow: {
@@ -424,8 +537,8 @@ const styles = StyleSheet.create({
   },
   filterPill: {
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderColor: colors.border,
+    backgroundColor: colors.white,
+    borderColor: '#BFDBFE',
     borderRadius: radius.full,
     borderWidth: 1,
     justifyContent: 'center',
@@ -433,22 +546,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   filterPillActive: {
-    backgroundColor: colors.bgInfo,
-    borderColor: '#BFDBFE',
+    backgroundColor: '#DBEAFE',
+    borderColor: '#93C5FD',
   },
   filterPillText: {
     ...typography.caption4,
-    color: colors.softDark,
+    color: '#334155',
   },
   filterPillTextActive: {
-    color: colors.primary,
+    color: '#1D4ED8',
   },
   cardList: {
     gap: spacing.sm,
   },
   userCard: {
-    backgroundColor: colors.bgCard,
-    borderColor: colors.border,
+    backgroundColor: colors.white,
+    borderColor: '#D7E3F4',
     borderRadius: radius.lg,
     borderWidth: 1,
     gap: spacing.xs,
@@ -478,11 +591,11 @@ const styles = StyleSheet.create({
   },
   roleBadgeText: {
     ...typography.caption4,
-    color: colors.text,
+    color: '#0F172A',
   },
   userEmail: {
     ...typography.body2,
-    color: colors.softDark,
+    color: '#334155',
   },
   userMeta: {
     ...typography.caption2,
@@ -490,13 +603,16 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.xs,
     marginTop: spacing.xs,
   },
   actionButton: {
     alignItems: 'center',
-    backgroundColor: colors.bgInfo,
+    backgroundColor: colors.white,
+    borderColor: '#BFDBFE',
     borderRadius: radius.md,
+    borderWidth: 1,
     justifyContent: 'center',
     minHeight: 36,
     paddingHorizontal: spacing.sm,
@@ -507,8 +623,10 @@ const styles = StyleSheet.create({
   },
   dangerButton: {
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.white,
+    borderColor: '#FECACA',
     borderRadius: radius.md,
+    borderWidth: 1,
     justifyContent: 'center',
     minHeight: 36,
     paddingHorizontal: spacing.sm,
@@ -521,8 +639,8 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   eventCard: {
-    backgroundColor: colors.bgCard,
-    borderColor: colors.border,
+    backgroundColor: colors.white,
+    borderColor: '#D7E3F4',
     borderRadius: radius.lg,
     borderWidth: 1,
     gap: spacing.xs,
@@ -534,6 +652,6 @@ const styles = StyleSheet.create({
   },
   eventMeta: {
     ...typography.body2,
-    color: colors.softDark,
+    color: '#334155',
   },
 });

@@ -74,12 +74,6 @@ function ZoomableImage({ uri }: { uri: string }) {
     }
   }, [baseScale, pinchScale]);
 
-  const handleReset = useCallback(() => {
-    lastScale.current = 1;
-    baseScale.setValue(1);
-    pinchScale.setValue(1);
-  }, [baseScale, pinchScale]);
-
   return (
     <View style={styles.viewerSlide}>
       <PinchGestureHandler
@@ -90,10 +84,6 @@ function ZoomableImage({ uri }: { uri: string }) {
           <Image contentFit="contain" source={{ uri }} style={styles.viewerImage} transition={150} />
         </Animated.View>
       </PinchGestureHandler>
-      <Pressable style={styles.viewerResetBtn} onPress={handleReset}>
-        <Ionicons name="refresh" size={16} color="#E2E8F0" />
-        <Text style={styles.viewerResetText}>Reset</Text>
-      </Pressable>
     </View>
   );
 }
@@ -894,21 +884,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   viewerImage: { width: '100%', height: '100%' },
-  viewerResetBtn: {
-    position: 'absolute',
-    bottom: 110,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(15,23,42,0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.28)',
-  },
-  viewerResetText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#E2E8F0' },
   viewerHint: {
     position: 'absolute',
     bottom: 56,
