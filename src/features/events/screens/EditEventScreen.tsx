@@ -7,7 +7,6 @@ import {
   Alert,
   Animated,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -273,21 +272,17 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
       <View style={styles.orbAmber}  pointerEvents="none" />
       <View style={styles.orbBlue}   pointerEvents="none" />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
-        style={{ flex: 1, backgroundColor: '#060D1F' }}
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scrollView}
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        bounces={false} overScrollMode="never"
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        onScrollBeginDrag={() => Keyboard.dismiss()}
+        contentContainerStyle={styles.scroll}
       >
-        <ScrollView
-          ref={scrollRef}
-          style={styles.scrollView}
-          bounces={false} overScrollMode="never"
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-          onScrollBeginDrag={() => Keyboard.dismiss()}
-          contentContainerStyle={styles.scroll}
-        >
           {/* ── Hero ── */}
           <Animated.View
             style={[
@@ -331,8 +326,7 @@ export function EditEventScreen({ navigation, route }: EditEventScreenProps) {
               submitLabel={isSubmitting ? 'Saving Changes…' : 'Save Changes'}
             />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </SafeAreaView>
   );
 }
