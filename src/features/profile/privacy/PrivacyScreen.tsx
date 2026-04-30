@@ -106,27 +106,9 @@ export function PrivacyScreen({ navigation }: PrivacyScreenProps) {
 
   const handleToggleSetting = useCallback(
     async (key: SettingKey, value: boolean) => {
-      if (key === 'loginAlerts' && value && permissionState === 'disabled') {
-        Alert.alert(
-          'Phone alerts are blocked',
-          'Turn on device notifications first so security alerts can reach this phone.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Open Settings',
-              onPress: () => {
-                setIsOpeningSettings(true);
-                void openPhoneSettings().finally(() => setIsOpeningSettings(false));
-              },
-            },
-          ],
-        );
-        return;
-      }
-
       await persistSettings({ ...settings, [key]: value });
     },
-    [permissionState, persistSettings, settings],
+    [persistSettings, settings],
   );
 
   const handleOpenPhoneSettings = useCallback(async () => {

@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import type { ProfileRecord } from '../../../lib/supabase/types';
 import { colors } from '../../../theme/colors';
@@ -67,12 +67,20 @@ export function ProfileAuthenticatedContent({
     <>
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>Quick Actions</Text>
-        <View style={styles.quickActions}>
-          {quickActions.map((action) => (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickActions}
+        >
+          {quickActions.map((action, index) => (
             <Pressable
               key={action.label}
               accessibilityRole="button"
-              style={({ pressed }) => [styles.quickAction, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [
+                styles.quickAction,
+                index < quickActions.length - 1 && styles.quickActionSpacing,
+                pressed && { opacity: 0.7 },
+              ]}
               onPress={action.onPress}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}18` }]}>
@@ -81,7 +89,7 @@ export function ProfileAuthenticatedContent({
               <Text style={styles.quickActionLabel}>{action.label}</Text>
             </Pressable>
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       <View style={styles.section}>

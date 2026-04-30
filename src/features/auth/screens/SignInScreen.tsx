@@ -153,10 +153,18 @@ export function SignInScreen({ navigation }: SignInScreenProps) {
                 </View>
                 <Text style={styles.h2Solid}> IN</Text>
               </View>
-              <Text style={styles.h3Accent}>Sign In Mode</Text>
+              <Text style={styles.h3Accent}>Sign In</Text>
               <Text style={styles.heroSubcopy}>
                 Pick up where you left off and get back to your next event.
               </Text>
+
+              <View style={styles.topTagRow}>
+                {['Access', 'Momentum', 'Return'].map((item) => (
+                  <Text key={item} style={styles.topTagText}>
+                    • {item}
+                  </Text>
+                ))}
+              </View>
             </View>
           </Animated.View>
 
@@ -292,9 +300,7 @@ export function SignInScreen({ navigation }: SignInScreenProps) {
                   ) : (
                     <>
                       <Text style={styles.btnLabel}>Let&apos;s Go</Text>
-                      <View style={styles.btnArrow}>
-                        <Ionicons name="flash" size={16} color="#0f172a" />
-                      </View>
+                      
                     </>
                   )}
                 </View>
@@ -311,8 +317,8 @@ export function SignInScreen({ navigation }: SignInScreenProps) {
                 style={({ pressed }) => [styles.signupBtn, pressed && { opacity: 0.7 }]}
                 onPress={() => navigation.navigate('SignUp')}
               >
-                <Text style={styles.signupText}>new here?</Text>
-                <Text style={styles.signupLink}> create an account</Text>
+                <Text style={styles.signupText}>New here?</Text>
+                <Text style={styles.signupLink}> Create an account</Text>
               </Pressable>
             </ScrollView>
           </Animated.View>
