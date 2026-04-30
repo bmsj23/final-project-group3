@@ -39,14 +39,12 @@ export function PrivacySummaryCard({
 
       <View style={styles.summaryStats}>
         <View style={styles.summaryStat}>
-          <Text style={styles.summaryStatValue}>
-            {settings.profileVisibleToAttendees ? 'Visible' : 'Hidden'}
-          </Text>
-          <Text style={styles.summaryStatLabel}>Organizer profile</Text>
+          <Text style={styles.summaryStatValue}>{settings.analyticsSharing ? 'On' : 'Off'}</Text>
+          <Text style={styles.summaryStatLabel}>Analytics</Text>
         </View>
         <View style={styles.summaryStat}>
-          <Text style={styles.summaryStatValue}>{settings.loginAlerts ? 'On' : 'Off'}</Text>
-          <Text style={styles.summaryStatLabel}>Security alerts</Text>
+          <Text style={styles.summaryStatValue}>{settings.personalizedRecommendations ? 'On' : 'Off'}</Text>
+          <Text style={styles.summaryStatLabel}>Suggestions</Text>
         </View>
         <View style={styles.summaryStat}>
           <Text style={styles.summaryStatValue}>

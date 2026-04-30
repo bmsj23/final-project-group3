@@ -30,8 +30,6 @@ export function PrivacySettingsSection({
 
       <View style={styles.toggleList}>
         {items.map((item) => {
-          const disabled = item.key === 'loginAlerts' && permissionState === 'disabled' && !settings[item.key];
-
           return (
             <View key={item.key} style={styles.toggleRow}>
               <View style={styles.toggleIconWrap}>
@@ -42,7 +40,6 @@ export function PrivacySettingsSection({
                 <Text style={styles.toggleDescription}>{item.description}</Text>
               </View>
               <Switch
-                disabled={disabled}
                 onValueChange={(value) => void onToggle(item.key, value)}
                 thumbColor={settings[item.key] ? '#FFFFFF' : '#CBD5E1'}
                 trackColor={{ false: '#CBD5E1', true: '#2563EB' }}

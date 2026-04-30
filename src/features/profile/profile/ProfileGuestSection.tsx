@@ -15,12 +15,7 @@ const GUEST_FEATURES = ['Create Events', 'Manage Bookings', 'Organizer Dashboard
 export function ProfileGuestSection({ onExplore, onSignIn }: ProfileGuestSectionProps) {
   return (
     <View style={styles.guestSection}>
-      <LinearGradient
-        colors={['#ffffff', '#ffffff', '#ffffff']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.guestCard}
-      >
+      <View style={styles.guestCard}>
         <Text style={styles.guestCardTitle}>You're browsing as a guest</Text>
         <Text style={styles.guestCardSub}>
           Sign in to unlock event creation, bookings, and your personal organizer dashboard.
@@ -41,7 +36,7 @@ export function ProfileGuestSection({ onExplore, onSignIn }: ProfileGuestSection
           onPress={onSignIn}
         >
           <LinearGradient
-            colors={['#2563EB', '#2563EB', '#2563EB']}
+            colors={['#060D1F', '#0F1E3D']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.guestSignInGrad}
@@ -50,7 +45,7 @@ export function ProfileGuestSection({ onExplore, onSignIn }: ProfileGuestSection
             <Ionicons name="arrow-forward" size={16} color="#fff" />
           </LinearGradient>
         </Pressable>
-      </LinearGradient>
+      </View>
 
       <Pressable
         accessibilityRole="button"

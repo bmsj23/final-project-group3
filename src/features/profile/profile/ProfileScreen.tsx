@@ -116,6 +116,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
           <Animated.View
             style={[
               styles.body,
+              isGuest && styles.bodyGuest,
               {
                 opacity: bodyAnim,
                 transform: [
@@ -126,8 +127,6 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
               },
             ]}
           >
-            <View style={styles.handle} />
-
             {isGuest ? (
               <ProfileGuestSection
                 onExplore={() => navigation.navigate('Explore')}

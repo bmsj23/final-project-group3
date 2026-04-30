@@ -153,7 +153,7 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
                 </View>
                 <Text style={styles.h2Solid}> NOW</Text>
               </View>
-              <Text style={styles.h3Accent}>Sign Up Mode</Text>
+              <Text style={styles.h3Accent}>Sign Up</Text>
             </View>
           </Animated.View>
 
