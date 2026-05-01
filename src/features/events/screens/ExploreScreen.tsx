@@ -110,7 +110,7 @@ export function ExploreScreen({ navigation }: ExploreScreenProps) {
             <View style={styles.modalBackdrop}>
               <View style={styles.modalCard}>
                 <View style={styles.modalIconWrap}>
-                  <Ionicons name="heart" size={22} color="#16A34A" />
+                  <Ionicons name="heart" size={22} color="#DC2626" />
                 </View>
                 <Text style={styles.modalTitle}>Event saved!</Text>
                 <Text style={styles.modalMessage}>This event has been added to your saved list.</Text>
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(22, 163, 74, 0.12)',
+    backgroundColor: 'rgba(220, 38, 38, 0.12)',
   },
   modalIconRemoved: {
     backgroundColor: 'rgba(220, 38, 38, 0.12)',
