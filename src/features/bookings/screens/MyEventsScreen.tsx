@@ -30,11 +30,43 @@ import type { EventSummary } from '../../events/types';
 type MyEventsScreenProps = AppTabScreenProps<'MyEvents'>;
 
 const STATUS_COLORS: Record<string, { text: string; bg: string }> = {
-  upcoming:  { text: '#60A5FA', bg: 'rgba(96,165,250,0.12)'  },
-  ongoing:   { text: '#34D399', bg: 'rgba(52,211,153,0.12)'  },
-  completed: { text: '#94A3B8', bg: 'rgba(148,163,184,0.12)' },
-  cancelled: { text: '#EF4444', bg: 'rgba(239,68,68,0.12)'   },
+  upcoming:  { text: '#FFFFFF', bg: '#2563EB' },
+  ongoing:   { text: '#FFFFFF', bg: '#059669' },
+  completed: { text: '#FFFFFF', bg: '#475569' },
+  cancelled: { text: '#FFFFFF', bg: '#DC2626' },
 };
+
+function resolveLiveEventStatus(event: Pick<EventSummary, 'status' | 'startsAt'>): EventSummary['status'] {
+  if (event.status === 'cancelled' || event.status === 'completed') {
+    return event.status;
+  }
+
+  const startsAtMs = Date.parse(event.startsAt);
+  if (!Number.isFinite(startsAtMs)) {
+    return event.status;
+  }
+
+  const nowMs = Date.now();
+  if (nowMs < startsAtMs) {
+    return 'upcoming';
+  }
+
+  const endOfEventDay = new Date(startsAtMs);
+  endOfEventDay.setHours(23, 59, 59, 999);
+  return nowMs <= endOfEventDay.getTime() ? 'ongoing' : 'completed';
+}
+
+function withResolvedStatus(event: EventSummary): EventSummary {
+  const status = resolveLiveEventStatus(event);
+  if (status === event.status) {
+    return event;
+  }
+
+  return {
+    ...event,
+    status,
+  };
+}
 
 function EventCard({
   event,
@@ -104,9 +136,9 @@ function EventCard({
           </View>
 
           <View style={styles.cardFooter}>
-            <View style={styles.spotsRow}>
-              <Ionicons name="people-outline" size={13} color={colors.primary} />
-              <Text style={styles.spotsText}>{event.remainingSlots} / {event.capacity} slots</Text>
+            <View style={styles.ticketsBadge}>
+              <Ionicons name="people-outline" size={13} color="#FFFFFF" />
+              <Text style={styles.ticketsBadgeText}>{event.remainingSlots} / {event.capacity} slots</Text>
             </View>
             <View style={styles.chevronWrap}>
               <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
@@ -136,6 +168,14 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
     ]).start();
   }, []);
 
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setEvents((current) => current.map(withResolvedStatus));
+    }, 60_000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
   const loadMyEvents = useCallback(
     async (isRefresh = false) => {
       if (!profile) return;
@@ -144,7 +184,7 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
       try {
         const { data, error } = await fetchMyCreatedEvents(profile.id);
         if (error) throw error;
-        setEvents(data);
+        setEvents(data.map(withResolvedStatus));
         setErrorMessage(null);
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : 'Unable to load your events.');
@@ -240,6 +280,7 @@ export function MyEventsScreen({ navigation }: MyEventsScreenProps) {
               avatarInitials={profile?.full_name?.slice(0, 1) ?? undefined}
               avatarUri={profile?.avatar_url ?? null}
               eyebrow="Organizer Dashboard"
+              extraBottomInset={24}
               title="My Events"
               rightSlot={
                 <View style={styles.heroChip}>
@@ -396,9 +437,9 @@ const styles = StyleSheet.create({
   cardImageFallback: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2A63BC' },
   statusBadge: {
     position: 'absolute', top: 10, left: 10,
-    paddingHorizontal: 12, paddingVertical: 5,
+    paddingHorizontal: 12, paddingVertical: 6,
     borderRadius: radius.full,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.32)',
   },
   statusText: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 0.4, textTransform: 'uppercase' },
   cardBody: { padding: spacing.md, gap: 8 },
@@ -407,8 +448,16 @@ const styles = StyleSheet.create({
   cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   cardMetaText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: '#64748B', flex: 1 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
-  spotsRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  spotsText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: colors.primary },
+  ticketsBadge: {
+    alignItems: 'center',
+    backgroundColor: colors.primaryDark,
+    borderRadius: radius.full,
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  ticketsBadgeText: { color: '#FFFFFF', fontFamily: 'Inter_600SemiBold', fontSize: 12 },
   chevronWrap: {
     width: 28, height: 28, borderRadius: 14,
     backgroundColor: '#EEF4FF', alignItems: 'center', justifyContent: 'center',
