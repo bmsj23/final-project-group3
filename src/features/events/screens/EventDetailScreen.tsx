@@ -89,7 +89,18 @@ function ZoomableImage({ uri }: { uri: string }) {
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
+  }
+
+  return fallback;
 }
 
 export function EventDetailScreen({ navigation, route }: EventDetailScreenProps) {
@@ -372,7 +383,16 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
   const isTicketStepperDisabled = isBookingLoading || isBookingMutationLoading;
   const canDecreaseTickets = selectedTicketCount > 1;
   const canIncreaseTickets = selectedTicketCount < maxSelectableTickets;
-  const isRegisterDisabled = isTicketStepperDisabled || (event?.remainingSlots ?? 0) <= 0;
+  const registrationDeadlineTimestamp = Date.parse(event?.registrationDeadline ?? '');
+  const eventStartTimestamp = Date.parse(event?.startsAt ?? '');
+  const hasRegistrationEnded =
+    event?.status !== 'upcoming'
+    || (Number.isFinite(registrationDeadlineTimestamp) && Date.now() > registrationDeadlineTimestamp)
+    || (Number.isFinite(eventStartTimestamp) && Date.now() >= eventStartTimestamp);
+  const isRegisterDisabled =
+    isTicketStepperDisabled
+    || hasRegistrationEnded
+    || (event?.remainingSlots ?? 0) <= 0;
   const isUpdateDisabled =
     isTicketStepperDisabled
     || !myBooking
@@ -800,6 +820,8 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
                         ? 'Checking booking…'
                         : isRegistering
                           ? 'Registering…'
+                          : hasRegistrationEnded
+                            ? 'Registration Ended'
                           : event.remainingSlots <= 0
                             ? 'Sold Out'
                             : 'Register Now'}

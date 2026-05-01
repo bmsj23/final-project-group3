@@ -84,9 +84,23 @@ export async function cancelBooking(bookingId: string) {
 
 export async function fetchMyBookingForEvent(eventId: string) {
   const client = requireSupabase();
+  const {
+    data: { user },
+    error: authError,
+  } = await client.auth.getUser();
+
+  if (authError) {
+    return { data: null, error: authError };
+  }
+
+  if (!user?.id) {
+    return { data: null, error: new Error('Authentication required.') };
+  }
+
   const { data, error } = await client
     .from('bookings')
     .select('id, user_id, event_id, ticket_count, status, qr_payload, created_at, updated_at')
+    .eq('user_id', user.id)
     .eq('event_id', eventId)
     .eq('status', 'confirmed')
     .maybeSingle<BookingRecord>();
