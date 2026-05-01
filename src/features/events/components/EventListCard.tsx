@@ -7,6 +7,7 @@ import { radius } from '../../../theme/radius';
 import { shadows } from '../../../theme/shadows';
 import { spacing } from '../../../theme/spacing';
 import { typography } from '../../../theme/typography';
+import { useEventFavorites } from '../FavoritesProvider';
 import { formatEventDateTime, capitalizeLocation } from '../formatters';
 import type { EventSummary } from '../types';
 
@@ -70,11 +71,13 @@ const stackStyles = StyleSheet.create({
 export function EventListCard({
   categoryName,
   event,
-  isFavorited = false,
+  isFavorited: isFavoritedProp = false,
   onPress,
   onToggleFavorite,
   variant = 'compact',
 }: EventListCardProps) {
+  const { isFavorited: isFavoritedFromCtx } = useEventFavorites();
+  const isFavorited = isFavoritedFromCtx(event.id);
   const joinedCount = event.capacity - event.remainingSlots;
 
   return (

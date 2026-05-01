@@ -629,7 +629,7 @@ export function EventDetailScreen({ navigation, route }: EventDetailScreenProps)
         <View style={styles.bookingModalBackdrop}>
           <View style={styles.bookingModalCard}>
             <View style={[styles.bookingModalIconWrap, styles.bookingModalIconSuccess]}>
-              <Ionicons name="heart" size={22} color="#16A34A" />
+              <Ionicons name="heart" size={22} color="#DC2626" />
             </View>
             <Text style={styles.bookingModalTitle}>Event saved!</Text>
             <Text style={styles.bookingModalMessage}>This event has been added to your saved list.</Text>
@@ -1129,7 +1129,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bookingModalIconSuccess: {
-    backgroundColor: 'rgba(22, 163, 74, 0.12)',
+    backgroundColor: 'rgba(220, 38, 38, 0.12)',
   },
   bookingModalIconError: {
     backgroundColor: 'rgba(220, 38, 38, 0.12)',
