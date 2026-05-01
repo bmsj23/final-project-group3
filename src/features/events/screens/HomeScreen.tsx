@@ -123,7 +123,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   return (
     <ScreenContainer bg={colors.bgDark} noPadding>
       <StatusBar style="light" />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardWrap}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'height' : undefined} style={styles.keyboardWrap}>
         <View style={styles.screen}>
           <ScrollView
             ref={scrollRef}
@@ -145,13 +145,8 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               avatarInitials={profile?.full_name?.slice(0, 1) ?? undefined}
               avatarUri={profile?.avatar_url ?? null}
               eyebrow={profile?.full_name ? 'Hi Welcome' : 'Explore Events'}
+              extraBottomInset={24}
               title={profile?.full_name ?? 'Eventure'}
-              rightSlot={
-                <View style={styles.locationBlock}>
-                  <Text style={styles.locationLabel}>Current location</Text>
-                  <Text style={styles.locationValue}>Manila, PH</Text>
-                </View>
-              }
               bottomSlot={
                 <View style={styles.searchBar}>
                   <Ionicons color="#94A3B8" name="search" size={18} />
@@ -323,18 +318,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-  },
-  locationBlock: {
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  locationLabel: {
-    ...typography.caption5,
-    color: '#CBD5E1',
-  },
-  locationValue: {
-    ...typography.caption3,
-    color: '#93C5FD',
   },
   searchBar: {
     alignItems: 'center',
